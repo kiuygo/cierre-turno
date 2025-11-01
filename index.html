@@ -367,7 +367,7 @@
     <div class="icon-row">
       <button id="btn-share" class="btn filled" disabled style="display:none">🟢 WhatsApp</button>
       <button id="btn-copy" class="btn outlined" disabled style="display:none">📋 Copiar texto</button>
-      <button id="btn-print" class="btn outlined" disabled style="display:none">🖨️ Imprimir 80mm</button>
+      <button id="btn-print" class="btn outlined" disabled style="display:none">🖨️ Imprimir</button>
       <button id="btn-contact-inline" class="btn tonal" style="display:none">📞 Contactar soporte</button>
     </div>
     <div id="action-msg" class="helper" style="margin-top:6px;"></div>
@@ -428,9 +428,9 @@
     const num=toNum(input);
     if(!isFinite(num)) return '0';
     const rounded=Math.round(num*100)/100;
-    let str=rounded.toFixed(2);
-    str=str.replace(/\.?0+$/,'');
-    return str===''?'0':str;
+    if(Object.is(rounded,-0)) return '0';
+    const formatted=Number(rounded).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
+    return formatted || '0';
   };
   const fmtQty=val=>{
     const num=Math.round(toNum(val));
@@ -938,7 +938,7 @@
       const qty = Math.round(toNum(qtyTxt));
       if (qty > 0 && val > 0){
         const total = val * qty;
-        const line = `${fmtReportVal(val)} (${fmtQty(qty)}): ${fmtReportVal(total)}`;
+        const line = `${fmtReportVal(val)} (${fmtQty(qty)})= ${fmtReportVal(total)}`;
         rows.push(line);
       }
     });
@@ -982,13 +982,13 @@
       '',
       '*TOTALES*',
       `M3: ${totalM} | S/: ${totalS}`,
-      `Financ: ${finan} | *G. Total: ${sumaSis}*`,
+      `Financ: ${finan} | *G. Total: S/${sumaSis}*`,
       '',
-      '*MEDIOS DE PAGO*',
+      '*MEDIOS DE PAGO S/*',
       ...denomBlock,
-      `Efectivo S/: ${efectivoTotal}`,
-      `Tarjetas S/: ${tarjeta} | QR S/: ${qr}`,
-      `*Total S/: ${stContado}*`,
+      `Efectivo: ${efectivoTotal}`,
+      `Tarjetas: ${tarjeta} | QR: ${qr}`,
+      `*Total: S/${stContado}*`,
       '',
       '*ESTADO DEL CIERRE*',
       diffLine('Dif Total',v1)
@@ -1091,17 +1091,18 @@
       window.open(url,'_blank','noopener');
     };
 
+    let shareCompleted = false;
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function'){
-      const canShare = !shareFiles.length || typeof navigator.canShare !== 'function' || navigator.canShare({ files: shareFiles });
-      if (canShare){
-        try{
-          await navigator.share(sharePayload);
-        }catch(err){
-          if (err && err.name === 'AbortError') return;
-          console.warn('navigator.share no pudo adjuntar la constancia unida:', err);
-        }
+      try{
+        await navigator.share(sharePayload);
+        shareCompleted = true;
+      }catch(err){
+        if (err && err.name === 'AbortError') return;
+        console.warn('navigator.share no pudo adjuntar la constancia unida:', err);
       }
     }
+
+    if (shareCompleted) return;
 
     fallbackWhatsApp();
 
@@ -1123,42 +1124,21 @@
     showActionToast('No se pudo preparar la constancia unida. Intenta nuevamente.');
   }
   document.querySelector('#btn-share').onclick=async()=>{ if(!document.querySelector('#btn-share').disabled) await doShare(); };
-  // Imprimir reporte 80mm (abre diálogo de impresión)
+  // Imprimir reporte 80mm (genera PDF y lo abre en nueva pestaña)
   async function printReport80(){
     const report = buildReport();
-    const escapeHtml = s => String(s||'')
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;');
-    const reportHtml = escapeHtml(report).replace(/\n/g,'<br>');
-    const printWindow = window.open('', '_blank', 'noopener,width=420,height=640');
-    if(!printWindow){
-      alert('No se pudo abrir la ventana de impresión. Revisa los bloqueadores emergentes.');
+    const pdf = makeReportPdfBlob(report);
+    if(!pdf){
+      alert('No se pudo generar el PDF del reporte.');
       return;
     }
-    const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>Cierre de Turno - 80mm</title>
-  <style>
-    @page { size: 80mm auto; margin: 5mm 4mm; }
-    body { margin:0; font-family: "Courier New", Courier, monospace; background:#fff; color:#111; }
-    .ticket { width: 72mm; margin: 0 auto; padding: 0; }
-    .ticket-pre { white-space: normal; font-size: 12px; line-height: 1.4; }
-  </style>
-</head>
-<body>
-  <div class="ticket">
-    <div class="ticket-pre">${reportHtml}</div>
-  </div>
-  <script>
-    window.onload = function(){ setTimeout(function(){ window.print(); }, 120); };
-  <\\/script>
-</body>
-</html>`;
-    printWindow.document.write(html);
-    printWindow.document.close();
+    const url = URL.createObjectURL(pdf);
+    const preview = window.open(url, '_blank', 'noopener');
+    if(!preview){
+      // fallback si el bloqueo de ventanas impide abrir: usa navegación actual
+      window.location.href = url;
+    }
+    setTimeout(()=>URL.revokeObjectURL(url), 60_000);
   }
   document.querySelector('#btn-copy').onclick=async()=>{
     if(document.querySelector('#btn-copy').disabled) return;
