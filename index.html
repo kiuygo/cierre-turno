@@ -424,6 +424,18 @@
   const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
   const $=(s,r=document)=>r.querySelector(s);
   const fmt=n=>isFinite(n)?Number(n).toFixed(2):'0.00';
+  const fmtReportVal=(input)=>{
+    const num=toNum(input);
+    if(!isFinite(num)) return '0';
+    const rounded=Math.round(num*100)/100;
+    let str=rounded.toFixed(2);
+    str=str.replace(/\.?0+$/,'');
+    return str===''?'0':str;
+  };
+  const fmtQty=val=>{
+    const num=Math.round(toNum(val));
+    return isFinite(num)?String(num):'0';
+  };
   const toNum=v=>{ if(typeof v==='number')return v; if(!v)return 0; v=(''+v).replace(',','.').replace(/[^0-9.\-]/g,''); const x=parseFloat(v); return isFinite(x)?x:0; };
   try{ document.querySelector('#fecha').valueAsDate=new Date(); }catch{}
   document.addEventListener('DOMContentLoaded',()=>{ const oldFloat=document.getElementById('float-diftotal'); if(oldFloat) oldFloat.remove(); });
@@ -920,77 +932,67 @@
   function buildDenomsText(inline=false){
     const rows = [];
     document.querySelectorAll('#den-bills .den-row, #den-coins .den-row').forEach(row=>{
-      const v = parseFloat((row.querySelector('.den-value')?.textContent||'0').replace(',', '.'));
-      const q = parseInt(row.querySelector('input')?.value || '0', 10);
-      if (q > 0){
-        const base = 'S/ ' + fmt(v) + '×' + q + '=' + fmt(v * q);
-        rows.push(base);
+      const valTxt = row.querySelector('.den-value')?.textContent || '0';
+      const qtyTxt = row.querySelector('input')?.value || '0';
+      const val = toNum(valTxt);
+      const qty = Math.round(toNum(qtyTxt));
+      if (qty > 0 && val > 0){
+        const total = val * qty;
+        const line = `S/${fmtReportVal(val)} (x${fmtQty(qty)}): ${fmtReportVal(total)}`;
+        rows.push(line);
       }
     });
-    if (!rows.length) return inline ? 'Sin denominaciones registradas' : '• Sin denominaciones registradas';
-    return inline ? rows.join('; ') : rows.join('\n');
+    if (!rows.length) return inline ? 'Sin denominaciones registradas' : 'Sin denominaciones registradas';
+    return inline ? rows.join('\n') : rows.join('\n');
   }
     
   function buildReport(){
     const surts=[document.querySelector('#s1').checked?'1':'',document.querySelector('#s2').checked?'2':''].filter(Boolean).join(',')||'N/A';
-    const vv = getVentasValues();
-    const fecha = document.querySelector('#fecha')?.value || '';
+    const fecha = document.querySelector('#fecha')?.value || '—';
     const turno = (Array.from(document.querySelectorAll('input[name="turno"]')).find(r=>r.checked)||{}).value || '';
     const area  = (Array.from(document.querySelectorAll('input[name="area"]')).find(r=>r.checked)||{}).value || '';
-    const dni   = document.querySelector('#dni')?.value || '';
-    const sede  = document.querySelector('#sede')?.value || '';
-    const precio = document.querySelector('#precio')?.value || '0.00';
-    const totalM = fmt(toNum(document.querySelector('#total-m3')?.value));
-    const totalS = document.querySelector('#total-s')?.textContent || '0.00';
-    const nDesp  = document.querySelector('#ndesp')?.value || '0';
-    const finan  = document.querySelector('#finan')?.value || '0.00';
-    const sumaSis= document.querySelector('#suma-sis')?.textContent || '0.00';
-    const otros  = fmt(toNum(document.querySelector('#otros')?.value));
-    const tarjeta= fmt(toNum(document.querySelector('#tarjeta')?.value));
-    const qr     = fmt(toNum(document.querySelector('#qr')?.value));
-    const denomLine = buildDenomsText(true);
-    const efectivoTotal = document.querySelector('#efectivo-total')?.textContent || '0.00';
-    const u = unitLabel();
-    const uShort = u === 'Galones' ? 'Gal' : 'M3';
+    const dni   = document.querySelector('#dni')?.value || '—';
+    const sede  = document.querySelector('#sede')?.value || '—';
+    const totalM = fmtReportVal(document.querySelector('#total-m3')?.value);
+    const totalS = fmtReportVal(document.querySelector('#total-s')?.textContent);
+    const finan  = fmtReportVal(document.querySelector('#finan')?.value);
+    const sumaSis= fmtReportVal(document.querySelector('#suma-sis')?.textContent);
+    const tarjeta= fmtReportVal(document.querySelector('#tarjeta')?.value);
+    const qr     = fmtReportVal(document.querySelector('#qr')?.value);
+    const efectivoTotal = fmtReportVal(document.querySelector('#efectivo-total')?.textContent);
     const tol=0.005;
-    function diffLine(lbl,val){ return (Math.abs(val)<=tol?'✅':'❌')+' '+lbl+': '+fmt(val); }
-    const v1=parseFloat(document.querySelector('#st-diftotal').textContent)||0;
-    const v2=parseFloat(document.querySelector('#st-diftarjeta').textContent)||0;
-    const v3=parseFloat(document.querySelector('#st-difqr').textContent)||0;
-    const v4=parseFloat(document.querySelector('#st-difef').textContent)||0;
+    function diffLine(lbl,val){
+      const status = Math.abs(val)<=tol ? 'OK' : 'ALERTA';
+      return `${lbl}: ${fmtReportVal(val)} (${status})`;
+    }
+    const v1=toNum(document.querySelector('#st-diftotal')?.textContent);
+    const stContado = fmtReportVal(document.querySelector('#st-contado')?.textContent);
+    const denomLines = buildDenomsText(true);
+    const denomBlock = denomLines.split('\n');
     const obs=(document.querySelector('#obs').value||'').trim();
 
     const L=[
-      '*Cierre de Turno*',
-      `Fecha: ${fecha || '—'} | Turno: ${turno || '—'} | Surt: ${surts}`,
-      `Área: ${area || '—'} | DNI: ${dni || '—'} | Sede: ${sede || '—'}`,
+      'CIERRE DE TURNO',
+      `fecha: ${fecha}`,
+      `turno: ${turno || '—'} | surtidor: ${surts}`,
+      `DNI: ${dni} | área: ${area || '—'} | sede: ${sede}`,
       '',
-      '*Totales*',
-      `Precio S/: ${precio} | Total ${uShort}: ${totalM} | S/: ${totalS} | Desp: ${nDesp}`,
-      `Financ.: ${finan} | Suma Sis S/: ${sumaSis}`,
+      'TOTALES',
+      `M3: ${totalM} | S/: ${totalS}`,
+      `Financ: ${finan} | G. Total: ${sumaSis}`,
       '',
-      '*Detalle ventas*',
-      `Déb: ${fmt(vv.debM)} ${uShort} | S/: ${fmt(vv.debS)} | Desp: ${vv.debD}`,
-      `Créd: ${fmt(vv.creM)} ${uShort} | S/: ${fmt(vv.creS)} | Desp: ${vv.creD}`,
-      `Efec: ${fmt(vv.efeM)} ${uShort} | S/: ${fmt(vv.efeS)} | Desp: ${vv.efeD}`,
-      `Otros S/: ${otros}`,
-      '',
-      '*Denominaciones*',
-      denomLine,
-      `Total S/: ${efectivoTotal}`,
-      '',
-      '*Medios de pago*',
+      'MEDIOS DE PAGO',
+      ...denomBlock,
+      `Efectivo S/: ${efectivoTotal}`,
       `Tarjetas S/: ${tarjeta} | QR S/: ${qr}`,
+      `Total S/: ${stContado}`,
       '',
-      '*Estado del cierre*',
-      diffLine('Dif total',v1),
-      diffLine('Dif tarjetas',v2),
-      diffLine('Dif QR',v3),
-      diffLine('Dif efectivo',v4)
+      'ESTADO DEL CIERRE',
+      diffLine('Dif total',v1)
     ];
     if(obs){
       L.push('');
-      L.push('*Observaciones*');
+      L.push('OBSERVACIONES');
       L.push(obs);
     }
     const report = L.join('\n').replace(/\n{3,}/g,'\n\n').trim();
@@ -1090,7 +1092,6 @@
       if (canShare){
         try{
           await navigator.share(sharePayload);
-          return;
         }catch(err){
           if (err && err.name === 'AbortError') return;
           console.warn('navigator.share no pudo adjuntar la constancia unida:', err);
