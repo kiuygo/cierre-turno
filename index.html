@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <!-- Optimized on 2025-10-27 for mobile-first UI/UX; original structure preserved. -->
+
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cierre de Turno / BIOCOM</title>
+  <meta name="theme-color" content="#00695C"/>
+
+  <link rel="manifest" href="manifest.webmanifest"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="preload" href="assets/styles.css" as="style" />
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Reset básico para asegurar que los campos automáticos y estado del cierre estén en blanco */
+    .estado-cierre,
+    .estado-cierre .textfield,
+    .estado-cierre output,
+    .estado-cierre .valuefield,
+    output:not([id^="st-"]), 
+    .auto:not([id^="st-"]), 
+    .valuefield:not([id^="st-"]):not(.ghost), 
+    [readonly]:not([id^="st-"]), 
+    .cash-total:not([id^="st-"]) {
+      background-color: #FFFFFF !important;
+      border-color: #E2E8F0 !important;
+    }
+
+    @supports (-webkit-overflow-scrolling: touch) {
+      /* Ajuste de tamaño base para Android */
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+      
+      /* Fondo base para tarjetas */
+      .card:not(.estado-cierre), section:not(.estado-cierre), fieldset {
+        background: #FFFFFF !important;
+      }
+
+      /* GNV - Solo entradas manuales (excluir campos ya completados .filled y estado del cierre) */
+      body.area-gnv .textfield:not([id^="blk-"]) input:not(.filled):not([readonly]):not(.auto):not([type="radio"]):not([type="checkbox"]):not(.soles):not(.finan),
+      body.area-gnv .textfield:not([id^="blk-"]) select:not(.filled):not([readonly]):not(.auto),
+      body.area-gnv .textfield:not([id^="blk-"]) textarea:not(.filled):not([readonly]):not(.auto),
+      body.area-gnv .den-input input:not(.filled):not([readonly]) {
+        background-color: #ECFDF5 !important;
+        border-color: #86EFAC !important;
+      }
+
+      /* Líquidos - Solo entradas manuales (excluir campos ya completados .filled y estado del cierre) */
+      body.area-liquidos .textfield:not([id^="blk-"]) input:not(.filled):not([readonly]):not(.auto):not([type="radio"]):not([type="checkbox"]):not(.soles):not(.finan),
+      body.area-liquidos .textfield:not([id^="blk-"]) select:not(.filled):not([readonly]):not(.auto),
+      body.area-liquidos .textfield:not([id^="blk-"]) textarea:not(.filled):not([readonly]):not(.auto),
+      body.area-liquidos .den-input input:not(.filled):not([readonly]) {
+        background-color: #EFF6FF !important;
+        border-color: #93C5FD !important;
+      }
+
+      /* Siempre mantener en blanco los campos calculados/automáticos */
+      .valuefield,
+      output,
+      .auto,
+      .cash-total,
+      [readonly],
+      input.soles,
+      input.finan,
+      .estado-cierre .textfield {
+        background-color: #FFFFFF !important;
+        border-color: #E2E8F0 !important;
+      }
+      
+      /* Estado del cierre siempre limpio */
+      .estado-cierre,
+      .estado-cierre .textfield,
+      .estado-cierre output,
+      .estado-cierre .valuefield {
+        background-color: #FFFFFF !important;
+        border-color: #E2E8F0 !important;
+      }
+    }
+  </style>
+
+  <style>
+    :root{
+      --bg:#FAFAFA; --surface:#FFF; --on-surface:#111; --outline:#E0E0E0;
+      --primary:#00695C; --on-primary:#fff; --secondary:#455A64; --error:#D32F2F;
+      --radius:16px; --s1:8px; --s2:12px; --s3:16px; --maxw:1080px;
+      --shadow:0 4px 16px rgba(0,0,0,.08); --focus:2px solid #00695C;
+      --auto-bg:#F6F6F6; --auto-border:#DADADA;
+      --chip-ok:#E8F5E9; --chip-warn:#FFF8E1; --chip-err:#FFEBEE;
+    }
+    /*-- @media (prefers-color-scheme: dark){
+      :root {
+        --bg:#0F1111; --surface:#151718; --on-surface:#ECECEC; --outline:#2A2D2E;
+        --primary:#00695C; --on-primary:#0B0D0C; --secondary:#90A4AE; --error:#EF5350;
+        --shadow:0 6px 20px rgba(0,0,0,.35); --focus:2px solid #00695C;
+        --auto-bg:#1C1F1F; --auto-border:#2D3132;
+        --chip-ok:#12301a; --chip-warn:#2d2812; --chip-err:#311517;
+      }
+    } -->*/
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;line-height:1.4;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,'Noto Sans',sans-serif}
+    .container{max-width:var(--maxw);margin:0 auto;padding:16px}
+    .app-bar{position:sticky;top:0;z-index:10;padding:16px;background:transparent}
+    .app-bar h1{margin:0;font-size:20px}
+    .app-bar p{margin:4px 0 0 0;font-size:14px;opacity:.8}
+    .row{display:grid;grid-template-columns:1fr;gap:12px}
+    .row-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+    .row-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    @media(max-width:680px){.row-2{grid-template-columns:1fr}}
+    .helper{font-size:12px;opacity:.8;margin-top:4px}
+    .helper.error{color:#D32F2F;opacity:1}
+    .divider{border-top:1px solid rgba(0,0,0,.1);margin:16px 0}
+    /* Denomination row layout now lives in assets/styles.css to avoid conflicts */
+    .den-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    small.meta{opacity:.8;font-size:12px;margin-left:6px}
+    /* outputs fantasma (sin caja) */
+    .valuefield.ghost{border:0 !important;background:transparent !important;padding:10px 0}
+    .assist-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px} .assist-chip{padding:8px 10px;border-radius:999px;font-size:13px;border:1px solid var(--outline)}
+    .ok{background:var(--chip-ok)} .warn{background:var(--chip-warn)} .err{background:var(--chip-err)}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px} .chip{border:1px solid var(--outline);padding:6px;border-radius:12px;background:#F9F9F9;display:flex;align-items:center;gap:6px}
+    .chip img{width:84px;height:72px;object-fit:cover;border-radius:8px}
+  </style>
+
+  <script>
+    // SW + normalización numérica inicial
+    if ('serviceWorker' in navigator) {
+      addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+    }
+    function normalizeEmptyNumericInputs(){
+      const sel = [
+        '#izi-tarjeta', '#tarjeta',
+        '#izi-qr', '#qr',
+        '#finan',
+        '#efectivo-denominaciones input',
+        '.efectivo-denominaciones input',
+        '.denominaciones input',
+        'input[data-role="den-qty"]',
+        'input[data-denom]'
+      ].join(',');
+      document.querySelectorAll(sel).forEach(el=>{
+        const ro = el.hasAttribute('readonly') || el.getAttribute('aria-readonly')==='true';
+        if (ro) return;
+        if (el.value === '' || el.value == null) el.value = '0';
+      });
+    }
+    document.addEventListener('input', (e)=>{
+      const el = e.target;
+      if(!el || el.tagName!=='INPUT') return;
+      const isNum = el.matches('#izi-tarjeta,#tarjeta,#izi-qr,#qr,#finan,#efectivo-denominaciones input,.efectivo-denominaciones input,.denominaciones input,[data-role="den-qty"],[data-denom]');
+      if (isNum && (el.value === '' || el.value == null)) el.value = '0';
+      if (typeof updateCalcs==='function') updateCalcs();
+      if (typeof updateUI==='function') updateUI();
+    });
+    document.addEventListener('DOMContentLoaded', ()=>{
+      normalizeEmptyNumericInputs();
+      if (typeof updateCalcs==='function') updateCalcs();
+      if (typeof updateUI==='function') updateUI();
+    });
+    function paymentsOK(){
+      const tar = document.querySelector('#izi-tarjeta') || document.querySelector('#tarjeta');
+      const qr  = document.querySelector('#izi-qr')      || document.querySelector('#qr');
+      if (tar && (tar.value === '' || tar.value == null)) tar.value = '0';
+      if (qr  && (qr.value  === '' || qr.value  == null))  qr.value = '0';
+      const toNumLoc = v => parseFloat(String(v).replace(',','.'));
+      const tarOk = tar ? !isNaN(toNumLoc(tar.value)) : true;
+      const qrOk  = qr  ? !isNaN(toNumLoc(qr.value))  : true;
+      let cashOk = true;
+      const sels = ['#efectivo-denominaciones input','.efectivo-denominaciones input','.denominaciones input','input[data-role="den-qty"]','input[data-denom]'];
+      const seen = new Set();
+      sels.forEach(sel=>document.querySelectorAll(sel).forEach(el=>{
+        if (seen.has(el)) return; seen.add(el);
+        const ro = el.hasAttribute('readonly') || el.getAttribute('aria-readonly')==='true';
+        if (ro) return;
+        if (el.value === '' || el.value == null) el.value = '0';
+        if (isNaN(toNumLoc(el.value))) cashOk = false;
+      }));
+      return tarOk && qrOk && cashOk;
+    }
+  </script>
+</head>
+
+<body class="area-gnv">
+<header class="app-bar no-motion">
+  <div class="app-bar-inner">
+    <div class="app-card">
+      <h1>Cierre de Turno - Caja (S/)</h1>
+      <p>Formulario de registro diario.</p>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <!-- ===== Estado del cierre ===== -->
+  <section class="card estado-cierre">
+    <h2 style="margin-top:0;">Estado del cierre</h2>
+    <div class="row-3">
+      <div class="textfield" id="blk-diftotal" data-kpi="diff"><label>DIFERENCIA TOTAL</label><output id="st-diftotal" class="valuefield ghost">0.00</output></div>
+      <div class="textfield"><label>GASOLUTIONS</label><output id="st-declarado" class="valuefield ghost">0.00</output></div>
+      <div class="textfield"><label>MONTO TOTAL CONTADO</label><output id="st-contado" class="valuefield ghost">0.00</output></div>
+    </div>
+    <div class="row-3" style="margin-top:12px">
+      <div class="textfield" id="blk-diftarjeta"><label>DIFERENCIA TARJETAS</label><output id="st-diftarjeta" class="valuefield ghost">0.00</output></div>
+      <div class="textfield" id="blk-difqr"><label>DIFERENCIA QR</label><output id="st-difqr" class="valuefield ghost">0.00</output></div>
+      <div class="textfield" id="blk-difef"><label>DIFERENCIA EFECTIVO</label><output id="st-difef" class="valuefield ghost">0.00</output></div>
+    </div>
+    <div class="divider"></div>
+    <div id="chips" class="assist-chips"></div>
+  </section>
+
+  <!-- ===== Constancia ===== -->
+  <section class="card" id="constancia">
+    <h2 style="margin-top:0;">Constancia</h2>
+    <div class="helper" id="const-helper">Sube al menos 1 foto (GNV e Izipay).</div>
+    <div class="const-row">
+      <!-- Col 1: GNV -->
+      <div class="const-col">
+        <div aria-label="Acciones GNV" class="icon-row">
+          <strong style="min-width:42px;">GNV:</strong>
+          <label aria-label="Tomar foto GNV" class="icon-btn">📸<input accept="image/*" capture="environment" id="gnv-cam" multiple style="display:none" type="file"/></label>
+          <label aria-label="Adjuntar foto GNV" class="icon-btn">📁<input accept="image/*" id="gnv-file" multiple style="display:none" type="file"/></label>
+          <button aria-label="Limpiar fotos GNV" class="icon-btn" id="gnv-clear" type="button">🧹</button>
+        </div>
+        <div class="chips" id="gnv-chips" role="list"></div>
+      </div>
+      <!-- Col 2: Izipay -->
+      <div class="const-col">
+        <div aria-label="Acciones Izipay" class="icon-row">
+          <strong style="min-width:52px;">Izipay:</strong>
+          <label aria-label="Tomar foto Izipay" class="icon-btn">📸<input accept="image/*" capture="environment" id="izipay-cam" multiple style="display:none" type="file"/></label>
+          <label aria-label="Adjuntar foto Izipay" class="icon-btn">📁<input accept="image/*" id="izipay-file" multiple style="display:none" type="file"/></label>
+          <button aria-label="Limpiar fotos Izipay" class="icon-btn" id="izipay-clear" type="button">🧹</button>
+        </div>
+        <div class="chips" id="izipay-chips" role="list"></div>
+      </div>
+      <!-- Col 3: Estado + Acciones + Resultado -->
+      <div class="const-col">
+        <div class="actions">
+          <strong class="meta" style="margin-right:6px">Unir imágenes:</strong>
+          <a id="merge-download" class="icon-btn" download style="display:none" title="Descargar">⬇️</a>
+        </div>
+        <div class="chips" id="merge-chips" role="list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Datos principales ===== -->
+  <section class="card" id="sec-datos">
+    <h2 style="margin-top:0;">Datos principales</h2>
+    <div class="row-3">
+      <div class="textfield"><label for="fecha">Fecha</label><input id="fecha" type="date"/></div>
+      <div class="textfield"><label for="sede">Sede</label><select id="sede"><option>San Jeronimo</option><option>San Sebastian</option></select></div>
+      <div class="textfield"><label for="dni">DNI</label>
+        <input id="dni" inputmode="numeric" pattern="\\d{8}" placeholder="########" aria-describedby="dni-help"/>
+        <div id="dni-help" class="helper">8 dígitos</div>
+      </div>
+    </div>
+    <div class="row-3" style="margin-top:12px">
+      <div class="textfield">
+        <label >Área</label>
+        <div class="segmented" role="radiogroup">
+          <input id="area-gnv" name="area" type="radio" value="GNV" checked/><label for="area-gnv">GNV</label>
+          <input id="area-liq" name="area" type="radio" value="Líquidos"/><label for="area-liq">Líquidos</label>
+        </div>
+      </div>
+      <div class="textfield">
+        <label>Turno</label>
+        <div class="segmented" role="radiogroup">
+          <input id="turno-man" name="turno" type="radio" value="Mañana" checked/><label for="turno-man">Mañana</label>
+          <input id="turno-tar" name="turno" type="radio" value="Tarde"/><label for="turno-tar">Tarde</label>
+          <input id="turno-noc" name="turno" type="radio" value="Noche"/><label for="turno-noc">Noche</label>
+        </div>
+      </div>
+      <div class="textfield">
+        <label>Surtidor</label>
+        <div class="checkbox"><input id="s1" type="checkbox" checked/><label for="s1">1</label></div>
+        <div class="checkbox"><input id="s2" type="checkbox"/><label for="s2">2</label></div>
+      </div>
+     </div>
+  </section>
+
+  <!-- ===== Totales del sistema ===== -->
+  <section class="card">
+    <h2 style="margin-top:0;">Totales del sistema</h2>
+    <div class="row-3">
+      <div class="textfield"><label for="total-m3" id="lbl-totalm3">DIF <span id="u1">M3</span></label><input id="total-m3" inputmode="decimal" placeholder="0.00" class="valuefield ghost"/></div>
+      <div class="textfield"><label for="precio">PRECIO S/</label><input id="precio" inputmode="decimal" value="2.40" class="valuefield ghost"/></div>
+      <div class="textfield"><label>S/ <span id="u2">M3</span></label><output id="total-s" class="valuefield ghost" ></output></div>
+    </div>
+    <div class="row-3" style="margin-top:12px">
+      <div class="textfield"><label>FINANCIACIÓN S/</label><output id="finan" class="valuefield ghost"></output></div>
+      <div class="textfield"><label>GASOLUTIONS S/</label><output id="suma-sis" class="valuefield ghost"></output></div>
+      <div class="textfield"><label>N° DESPACHOS</label><output id="ndesp" class="valuefield ghost"></output></div>
+    </div>
+  </section>
+
+  <!-- ===== Detalle de ventas ===== -->
+  <section class="card">
+    <h2 style="margin-top:0;">Detalle de ventas</h2>
+    <div class="helper" ><label><span id="u1">M3</span>: <strong id="det-m3">0.00</strong> | S/: <strong id="det-s">0.00</strong> | N° desp: <strong id="det-d">0</strong></label></div>
+    <div class="divider"></div>
+    <div id="ventas-panels"></div>
+     <div class="divider"></div>
+    <div class="row"><div class="textfield"><label for="otros">OTROS</label><input id="otros" inputmode="decimal" placeholder="0.00"/></div></div>
+  </section>
+
+  <!-- ===== Izipay + Efectivo ===== -->
+  <section class="card">
+    <h2 style="margin-top:0;">Izipay + Efectivo</h2>
+    <div class="row-2">
+      <div class="row-2">
+      <div class="textfield"><label for="tarjeta">TARJETAS (Visa) S/</label><input id="tarjeta" inputmode="decimal" class="auto" placeholder="0.00"/></div>
+      <div class="textfield"><label for="qr">QR (Débito) S/</label><input id="qr" inputmode="decimal" class="auto" placeholder="0.00"/></div>
+      </div>
+      <div class="efectivo-header">
+        <div class="textfield"><label>EFECTIVO S/</label><output id="efectivo-total" class="valuefield">0.00</output></div>
+        <div class="den-actions">
+          <div class="segmented den-clean-group" role="group">
+            <button id="btn-clear-den" type="button">♻ Limpiar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <section class="efectivo">
+      <div class="den-grid">
+        <div class="den-col">
+          <div id="den-bills"></div>
+        </div>
+        <div class="den-col">
+          <div id="den-coins"></div>
+        </div>
+    </div>
+    </section>
+  </section>
+
+  <!-- ===== Observaciones ===== -->
+  <section class="card"><h2 style="margin-top:0;">Observaciones</h2><div class="textfield"><label for="obs">Comentarios</label><textarea id="obs" placeholder="Anota cualquier detalle relevante..."></textarea></div>
+  </section>
+
+  <!-- Aviso validación -->
+  <section class="card" id="validation-banner" style="display:none">
+  <div class="row">
+      <div>
+        <strong>⚠️ Faltan datos</strong>
+        <div class="helper">Completa los campos <b>N° desp.</b> en <b>Detalle de ventas</b> (Débito / Crédito / Efectivo) de cada surtidor.</div>
+      </div>
+    </div>
+  </section>
+  <!-- Aviso soporte -->
+  <section class="card" id="support-banner" style="display:none">
+    <div class="row">
+      <div>
+        <strong>⚠️ No se puede enviar todavía</strong>
+        <div class="helper">La <b>Dif. total vs sistema</b> supera el umbral permitido (±S/ 20). Revisa los datos o contacta soporte.</div>
+      </div>
+    </div>
+  <div class="icon-row">
+  <button class="btn filled" id="btn-contact">Contactar soporte</button>
+  </div>
+  </div>
+  </section>
+
+  <!-- Acciones -->
+  <section class="card" id="actions-card">
+    <div class="icon-row">
+      <button id="btn-share" class="btn filled" disabled style="display:none">🟢 WhatsApp</button>
+      <button id="btn-copy" class="btn outlined" disabled style="display:none">📋 Copiar texto</button>
+      <button id="btn-print" class="btn outlined" disabled style="display:none">🖨️ Guardar PDF</button>
+      <button id="btn-contact-inline" class="btn tonal" style="display:none">📞 Contactar soporte</button>
+    </div>
+    <div id="action-msg" class="helper" style="margin-top:6px;"></div>
+  </section>
+</main>
+
+<!-- Template de paneles -->
+<template id="ventas-panel-template">
+  <div class="ventas-panel">
+    <p class="panel-title" style="margin:0 0 8px 0;font-weight:600"></p>
+    
+    <!-- Grid container for 3 columns -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+      <!-- Débito -->
+      <div class="column">
+        <div style="margin:4px 0 6px 0;opacity:.7;font-size:13px">Débito</div>
+        <div class="row">
+          <div class="textfield"><label class="lbl-m3">M3</label><input class="m3 deb" inputmode="decimal" placeholder="0.00"/></div>
+          <div class="textfield"><label>S/</label><output class="soles deb auto" >0.00</output></div>
+          <div class="textfield"><label>N° desp.</label><input class="desp deb" inputmode="numeric" placeholder="0"/></div>
+        </div>
+      </div>
+
+      <!-- Crédito -->
+      <div class="column">
+        <div style="margin:4px 0 6px 0;opacity:.7;font-size:13px">Crédito</div>
+        <div class="row">
+          <div class="textfield"><label class="lbl-m3">M3</label><input class="m3 cre" inputmode="decimal" placeholder="0.00"/></div>
+          <div class="textfield"><label>S/</label><output class="soles cre auto"></output></div>
+          <div class="textfield"><label>N° desp.</label><input class="desp cre" inputmode="numeric" placeholder="0"/></div>
+        </div>
+      </div>
+
+      <!-- Efectivo -->
+      <div class="column">
+        <div style="margin:4px 0 6px 0;opacity:.7;font-size:13px">Efectivo</div>
+        <div class="row">
+          <div class="textfield"><label class="lbl-m3">M3</label><input class="m3 efe" inputmode="decimal" placeholder="0.00"/></div>
+          <div class="textfield"><label>S/</label><output class="soles efe auto"></output></div>
+          <div class="textfield"><label>N° desp.</label><input class="desp efe" inputmode="numeric" placeholder="0"/></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financiación -->
+    <div class="row" style="margin-top:12px">
+      <div class="textfield"><label>Financiación S/</label><input class="finan" inputmode="decimal" placeholder="0.00"/></div>
+    </div>
+  </div>
+</template>
+
+<!-- === App JS (tu lógica completa con mejoras) === -->
+<script>
+  const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const $=(s,r=document)=>r.querySelector(s);
+  const fmt=n=>isFinite(n)?Number(n).toFixed(2):'0.00';
+  const toNum=v=>{ if(typeof v==='number')return v; if(!v)return 0; v=(''+v).replace(',','.').replace(/[^0-9.\-]/g,''); const x=parseFloat(v); return isFinite(x)?x:0; };
+  try{ document.querySelector('#fecha').valueAsDate=new Date(); }catch{}
+  document.addEventListener('DOMContentLoaded',()=>{ const oldFloat=document.getElementById('float-diftotal'); if(oldFloat) oldFloat.remove(); });
+
+  let mergedConstanciaBlob = null;
+  let mergedConstanciaUrl = '';
+  let mergedConstanciaName = '';
+
+  let actionToastEl = null;
+  function getActionToast(){
+    if (!actionToastEl){
+      actionToastEl = document.getElementById('action-toast');
+      if (!actionToastEl && typeof document !== 'undefined'){
+        actionToastEl = document.createElement('div');
+        actionToastEl.id = 'action-toast';
+        actionToastEl.setAttribute('role','status');
+        actionToastEl.setAttribute('aria-live','polite');
+        document.body.appendChild(actionToastEl);
+      }
+    }
+    return actionToastEl;
+  }
+  function showActionToast(message){
+    const toast = getActionToast();
+    if(!toast) return;
+    if(message){
+      toast.textContent = message;
+      toast.classList.add('show');
+    } else {
+      toast.textContent = '';
+      toast.classList.remove('show');
+    }
+  }
+
+  function invalidateMerged(){
+    const chips = document.getElementById('merge-chips');
+    if (chips) chips.innerHTML = '';
+    const a = document.getElementById('merge-download');
+    if (a){ a.removeAttribute('href'); a.style.display='none'; }
+    if (mergedConstanciaUrl){
+      try{ URL.revokeObjectURL(mergedConstanciaUrl); }catch(e){}
+      mergedConstanciaUrl = '';
+    }
+    mergedConstanciaBlob = null;
+    mergedConstanciaName = '';
+  }
+
+  function bindPhoto(kind){
+    const cam=document.querySelector('#'+kind+'-cam');
+    const file=document.querySelector('#'+kind+'-file');
+    const clear=document.querySelector('#'+kind+'-clear');
+    const chips=document.querySelector('#'+kind+'-chips');
+    const files=[];
+    function render(){
+      chips.innerHTML='';
+      files.forEach((f,i)=>{
+        const url=URL.createObjectURL(f);
+        const div=document.createElement('div'); div.className='chip';
+        div.innerHTML='<img alt="'+kind+' foto '+(i+1)+'" src="'+url+'" />';
+        chips.appendChild(div);
+      });
+      updateConstHelper();
+    }
+    function add(list){ for(const f of list) if(f.type && f.type.indexOf('image/')===0) files.push(f); invalidateMerged(); render(); updateUI(); updateConstHelper(); }
+    cam && (cam.onchange=e=>add(e.target.files));
+    file && (file.onchange=e=>add(e.target.files));
+    clear && (clear.onclick=()=>{ files.splice(0); invalidateMerged(); render(); updateUI(); updateConstHelper(); });
+    return ()=>files;
+  }
+  const getGnv=bindPhoto('gnv');
+  const getIzi=bindPhoto('izipay');
+  const validPhotos=()=>getGnv().length>=1 && getIzi().length>=1;
+  function updateConstHelper(){
+    const ok = validPhotos();
+    const h = document.querySelector('#const-helper');
+    h.textContent = ok ? '✔ Fotos listas.' : 'Sube 1 foto (GNV e Izipay).';
+    h.classList.toggle('error', !ok);
+    // Auto-generar la imagen unida cuando existan ambas fotos y aún no haya resultado
+    if (ok){
+      const hasMerged = (document.getElementById('merge-download')?.href||'').startsWith('data:')
+                        || (document.getElementById('merge-chips')?.children?.length||0) > 0;
+      if (!hasMerged){
+        try{ if (typeof mergeConstanciaImagesVertical === 'function') mergeConstanciaImagesVertical(); }catch{}
+      }
+    }
+  }
+
+  // Une GNV + Izipay en vertical (lado a lado) y muestra visor/descarga
+  async function mergeConstanciaImagesVertical(){
+    try{
+      const gnv = (getGnv && getGnv()[0]) || null;
+      const izi = (getIzi && getIzi()[0]) || null;
+      if(!gnv || !izi){ alert('Faltan fotos: sube GNV e Izipay.'); return; }
+      const readImg = f => new Promise((res, rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=URL.createObjectURL(f); img.decoding='async'; });
+      const [img1, img2] = await Promise.all([readImg(gnv), readImg(izi)]);
+      const baseH = Math.min(1000, Math.min(img1.naturalHeight||img1.height, img2.naturalHeight||img2.height));
+      const scaleH = (img,h)=>{ const r=h/(img.naturalHeight||img.height); return {w: Math.round((img.naturalWidth||img.width)*r), h}; };
+      const s1=scaleH(img1, baseH), s2=scaleH(img2, baseH);
+      const pad=4, lh=26; // bordes mínimos y fecha compacta
+      const W = s1.w + s2.w + pad*3; const H = baseH + pad*2 + lh;
+      const c=document.createElement('canvas'); c.width=W; c.height=H; const ctx=c.getContext('2d');
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      let x = pad; const y = pad;
+      ctx.drawImage(img1, 0,0, img1.naturalWidth||img1.width, img1.naturalHeight||img1.height, x, y, s1.w, s1.h);
+      // Separador sutil
+      ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + s1.w + pad/2, y); ctx.lineTo(x + s1.w + pad/2, y + baseH); ctx.stroke();
+      x += s1.w + pad;
+      ctx.drawImage(img2, 0,0, img2.naturalWidth||img2.width, img2.naturalHeight||img2.height, x, y, s2.w, s2.h);
+      // Fecha/hora (momento de unir)
+      const now = new Date();
+      const fecha = (document.querySelector('#fecha')?.value) || now.toISOString().slice(0,10);
+      const hh = String(now.getHours()).padStart(2,'0');
+      const mm = String(now.getMinutes()).padStart(2,'0');
+      const label = `${fecha} ${hh}:${mm}`;
+      ctx.fillStyle = '#111'; ctx.font = 'bold 22px system-ui, -apple-system, Segoe UI, Roboto, Arial'; ctx.textBaseline='middle';
+      ctx.strokeStyle='rgba(255,255,255,.65)'; ctx.lineWidth=2; ctx.strokeText(label, pad, H - (lh/2));
+      ctx.fillText(label, pad, H - (lh/2));
+
+      const blob = await new Promise((resolve, reject)=>{
+        if (typeof c.toBlob === 'function'){
+          c.toBlob(b=>{
+            if(b) resolve(b);
+            else reject(new Error('No se pudo generar la imagen combinada.'));
+          }, 'image/jpeg', 0.92);
+        } else {
+          try{
+            const dataUrl = c.toDataURL('image/jpeg', 0.92);
+            fetch(dataUrl)
+              .then(res=>res.blob())
+              .then(resolve)
+              .catch(reject);
+          }catch(err){
+            reject(err);
+          }
+        }
+      });
+      const dstr = (`${fecha}-${hh}${mm}`).replace(/\//g,'-');
+      if (mergedConstanciaUrl){
+        try{ URL.revokeObjectURL(mergedConstanciaUrl); }catch(e){}
+        mergedConstanciaUrl = '';
+      }
+      mergedConstanciaBlob = blob;
+      mergedConstanciaName = `constancia-${dstr}.jpg`;
+      mergedConstanciaUrl = URL.createObjectURL(blob);
+      const previewUrl = mergedConstanciaUrl;
+      const chips = document.getElementById('merge-chips');
+      const a    = document.getElementById('merge-download');
+      if (chips){
+        chips.innerHTML = '';
+        const div = document.createElement('div');
+        div.className = 'chip';
+        div.innerHTML = '<img alt="constancia unida" src="'+previewUrl+'" />';
+        chips.appendChild(div);
+      }
+      if(a){
+        a.href = previewUrl;
+        a.download = mergedConstanciaName;
+        a.style.display='inline-flex';
+      }
+    }catch(err){ console.error(err); alert('No se pudo generar la imagen combinada.'); }
+  }
+
+  const DNI_DB={"12345678":"Operador A","87654321":"Operador B"};
+  document.querySelector('#dni').addEventListener('input',e=>{
+    const v=e.target.value.replace(/\D/g,'').slice(0,8);
+    e.target.value=v;
+    const h=document.querySelector('#dni-help');
+    if(v.length===8){
+      const name=DNI_DB[v]||'DNI no registrado';
+      h.textContent=name;
+      h.style.color=(name==='DNI no registrado')?'#D32F2F':'#2E7D32';
+    } else { h.textContent='8 dígitos'; h.style.color=''; }
+    updateUI();
+  });
+// ===== Denominaciones (Billetes / Monedas) =====
+(function(){
+  // Estado (let para poder insertar nuevas)
+  let bills = [200,100,50,20,10].map(v => ({ v, q: 0 }));
+  let coins = [5,2,1,0.5,0.2,0.1].map(v => ({ v, q: 0 }));
+
+  const money = n => Number(n || 0).toFixed(2);
+
+  const $bills = document.getElementById('den-bills');
+  const $coins = document.getElementById('den-coins');
+  const $efTot = document.getElementById('efectivo-total');
+  const $btnClear = document.getElementById('btn-clear-den');
+
+  if(!$bills || !$coins) return;
+
+  // Utils
+  const totalEfectivo = () => {
+    const sum = arr => arr.reduce((acc,d)=> acc + d.v * (Number(d.q)||0), 0);
+    return sum(bills) + sum(coins);
+  };
+  function syncTotal(){
+    const t = totalEfectivo();
+    if ($efTot) $efTot.textContent = money(t);
+    // Integra con tu app
+    if (typeof recalc === 'function') { try { recalc(); } catch{} }
+  }
+  function renderColumn(list, container){
+    container.replaceChildren();
+    list.forEach((d, i) => {
+      const row = document.createElement('div');
+      row.className = 'den-row';
+      row.innerHTML = `
+        <div class="den-value">${d.v}</div>
+        <div class="den-times">×</div>
+        <div class="den-input"><input type="text" inputmode="numeric" value="${d.q||''}" placeholder=""></div>
+        <div class="den-equal">=</div>
+        <div class="den-result"><output class="sub">${money(d.v*(Number(d.q)||0))}</output></div> 
+      `;
+      const qty = row.querySelector('input');
+      const sub = row.querySelector('.sub');
+
+      const clamp = () => {
+        qty.value = qty.value.replace(/\D/g,'').slice(0,3);
+        d.q = qty.value ? Number(qty.value) : 0;
+        sub.textContent = money(d.v * d.q);
+        syncTotal();
+      };
+      qty.addEventListener('input', clamp);
+      qty.addEventListener('blur', clamp);
+
+      container.appendChild(row);
+    });
+  }
+  function renderAll(){
+    renderColumn(bills, $bills);
+    renderColumn(coins, $coins);
+    syncTotal();
+  }
+
+  $btnClear && $btnClear.addEventListener('click', () => {
+    bills.forEach(d => d.q = 0);
+    coins.forEach(d => d.q = 0);
+    renderAll(); // re-pinta a 0.00 y limpia inputs
+  });
+
+  // Boot
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderAll);
+  } else {
+    renderAll();
+  }
+})();
+
+// Unidad dinámica
+  function unit(){ return (Array.from(document.querySelectorAll('input[name="area"]')).find(r=>r.checked)||{}).value==='Líquidos'?'Galones':'M3'; }
+  function updateLabels(){
+    const u = unit();
+    // Actualizar todos los labels de unidad
+    document.querySelector('#u1').textContent = u;
+    document.querySelector('#u2').textContent = u;
+    document.querySelector('#lbl-totalm3').textContent = 'DIF ' + u;
+    document.querySelectorAll('.lbl-m3').forEach(l=>l.textContent=u);
+    // Re-calcular para actualizar el reporte
+    if (typeof recalc === 'function') recalc();
+  }
+  // Asegurar que updateLabels se llame cuando cambia el área
+  Array.from(document.querySelectorAll('input[name="area"]')).forEach(r=>r.addEventListener('change', updateLabels));
+  // Llamar al inicio para establecer labels correctos
+  updateLabels();
+
+    // Paneles de ventas por surtidor
+  function makeVentasPanel(label, key){
+    const tpl = document.querySelector('#ventas-panel-template');
+    const node = tpl.content.cloneNode(true);
+    const root = document.createElement('div');
+    root.appendChild(node);
+    const panel = root.firstElementChild;
+    panel.classList.add('ventas-panel-item');
+    panel.querySelector('.panel-title').textContent = 'Surtidor ' + label;
+    panel.querySelectorAll('input').forEach(inp=>{
+      inp.dataset.key = key;
+      inp.addEventListener('input', recalc);
+    });
+    return panel;
+  }
+
+
+  function renderVentasPanels(){
+    const cont = document.querySelector('#ventas-panels');
+    cont.innerHTML='';
+    const s1 = document.querySelector('#s1').checked, s2 = document.querySelector('#s2').checked;
+
+    // Layout: si hay dos paneles, usa clase responsive (apila en móvil)
+    cont.classList.toggle('grid-2', s1 && s2);
+    if (s1 && s2) {
+      cont.appendChild(makeVentasPanel('1','s1'));
+      cont.appendChild(makeVentasPanel('2','s2'));
+    } else {
+      if (s1) cont.appendChild(makeVentasPanel('1','s1'));
+      else if (s2) cont.appendChild(makeVentasPanel('2','s2'));
+      else cont.appendChild(makeVentasPanel('1','s1')); // fallback
+    }
+
+    updateLabels();
+    // for desktop-only accessibility, evita activar teclado en pantallas táctiles
+    const firstInput = cont.querySelector('.ventas-panel input');
+    if (firstInput) {
+      let isTouch = false;
+      try{
+        const mql = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(pointer: coarse)') : null;
+        const coarse = !!(mql && typeof mql.matches === 'boolean' && mql.matches);
+        const touchPoints = typeof navigator !== 'undefined' && (navigator.maxTouchPoints || navigator.msMaxTouchPoints || 0) > 0;
+        isTouch = coarse || touchPoints;
+      }catch(e){
+        isTouch = false;
+      }
+      if (!isTouch) firstInput.focus();
+    }
+  }
+
+  document.querySelector('#s1').addEventListener('change', renderVentasPanels);
+  document.querySelector('#s2').addEventListener('change', renderVentasPanels);
+  renderVentasPanels();
+
+  (function ensureOneSurtidor(){
+    const s1 = document.getElementById('s1');
+    const s2 = document.getElementById('s2');
+    if(!s1 || !s2) return;
+
+    function guard(e){
+      // Si el usuario desmarca el último activo, lo reactivamos
+      if(!s1.checked && !s2.checked){
+        // reactiva el que el usuario tocó para no frustrar la acción
+        (e && e.target === s2 ? s2 : s1).checked = true;
+      }
+      // re-render para respetar tu lógica de paneles
+      if (typeof renderVentasPanels === 'function') renderVentasPanels();
+      if (typeof updateUI === 'function') updateUI();
+    }
+    s1.addEventListener('change', guard);
+    s2.addEventListener('change', guard);
+
+    // Estado inicial: asegúrate de que haya al menos uno activo
+    if(!s1.checked && !s2.checked){ s1.checked = true; }
+    guard();
+  })();
+
+  function getVentasValues(){
+    const precio = toNum(document.querySelector('#precio').value||2.4);
+    const out = {debM:0, creM:0, efeM:0, debS:0, creS:0, efeS:0, debD:0, creD:0, efeD:0, finan:0};
+    Array.from(document.querySelectorAll('#ventas-panels .ventas-panel')).forEach(p=>{
+      const g = sel => toNum(p.querySelector(sel)?.value);
+      const dM=g('.m3.deb'), cM=g('.m3.cre'), eM=g('.m3.efe');
+      const dD=g('.desp.deb'), cD=g('.desp.cre'), eD=g('.desp.efe');
+      const fP=g('.finan');
+      out.debM+=dM; out.creM+=cM; out.efeM+=eM;
+      out.debS+=dM*precio; out.creS+=cM*precio; out.efeS+=eM*precio;
+      out.debD+=dD; out.creD+=cD; out.efeD+=eD;
+      out.finan+=fP;
+      const setVal = (selector, val) => { const el=p.querySelector(selector); if(el) el.value = fmt(val); };
+      setVal('.soles.deb', dM*precio);
+      setVal('.soles.cre', cM*precio);
+      setVal('.soles.efe', eM*precio);
+    });
+    return out;
+  }
+
+  function recalc(){
+    const precio=toNum(document.querySelector('#precio').value||2.4);
+    const total=toNum(document.querySelector('#total-m3').value);
+  const totalS=total*precio; document.querySelector('#total-s').textContent=fmt(totalS); document.querySelector('#total-s').classList.remove('ghost');
+
+    
+    const vv = getVentasValues();
+    document.querySelector('#finan').value = fmt(vv.finan);
+    const finan = vv.finan;
+    const sumaSis=totalS+finan; document.querySelector('#suma-sis').textContent=fmt(sumaSis);
+// totales detalle y N° despachos (readonly)
+    const detM = vv.debM + vv.creM + vv.efeM;
+    const detS = vv.debS + vv.creS + vv.efeS;
+    const totalDesp = vv.debD + vv.creD + vv.efeD;
+    document.querySelector('#det-m3').textContent = fmt(detM);
+    document.querySelector('#det-s').textContent  = fmt(detS);
+    document.querySelector('#det-d').textContent  = String(totalDesp);
+    document.querySelector('#ndesp').value = String(totalDesp);
+// Estado (fórmulas con sumas S1+S2)
+    const tarjeta=toNum(document.querySelector('#tarjeta').value), qr=toNum(document.querySelector('#qr').value), otros=toNum(document.querySelector('#otros').value);
+    const efectivoContado = toNum(document.querySelector('#efectivo-total').textContent);
+    const contado = efectivoContado + tarjeta + qr;
+    document.querySelector('#st-contado').textContent = fmt(contado);
+    document.querySelector('#st-declarado').textContent = fmt(sumaSis);
+    const difTotal = contado - sumaSis; document.querySelector('#st-diftotal').textContent = fmt(difTotal);
+    const difTar   = vv.creS - tarjeta; document.querySelector('#st-diftarjeta').textContent = fmt(difTar);
+    const difQR    = vv.debS - qr;     document.querySelector('#st-difqr').textContent = fmt(difQR);
+    const difEf    = (vv.efeS + finan + otros) - efectivoContado; document.querySelector('#st-difef').textContent = fmt(difEf);
+
+    // Chips: Total + (Tarjetas, QR, Efectivo) en ese orden
+    const chips=document.querySelector('#chips'); chips.innerHTML='';
+    const mk=(t,c)=>{ const s=document.createElement('span'); s.className='assist-chip '+c; s.textContent=t; return s;};
+    chips.append(
+      mk(difTotal===0?'✅ OK':(difTotal<0?'❗Tienes Faltante':'⚠️ Sobra'), difTotal===0?'ok':(difTotal<0?'err':'warn')),
+      mk(difTar===0?'💳 OK':'💳 Tarjetas no cuadran', difTar===0?'ok':'warn'),
+      mk(difQR===0?'🧾 OK':'🧾 QR no cuadra', difQR===0?'ok':'warn'),
+      mk(difEf===0?'💵 OK':'💵 Efectivo no cuadra', difEf===0?'ok':'warn'),
+    );
+    const tol=0.005;
+    document.querySelector('#blk-diftotal').classList.toggle('mismatch', Math.abs(difTotal)>tol);
+    document.querySelector('#blk-diftarjeta').classList.toggle('mismatch', Math.abs(difTar)>tol);
+    document.querySelector('#blk-difqr').classList.toggle('mismatch', Math.abs(difQR)>tol);
+    document.querySelector('#blk-difef').classList.toggle('mismatch', Math.abs(difEf)>tol);
+
+    updateConstHelper();
+    document.querySelectorAll('#ventas-panels .ventas-panel input.desp').forEach(el=>{
+      el.classList.toggle('auto', (el.value||'').trim()==='');
+    });
+    updateUI();
+  }
+  Array.from(document.querySelectorAll('input,select,textarea')).forEach(el=>{ el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
+
+  function basicsOK(){
+    const dniOk = (document.querySelector('#dni').value||'').length===8;
+    const sedeOk = !!(document.querySelector('#sede').value||'');
+    const fechaOk = !!(document.querySelector('#fecha').value||'');
+    const fotosOk = validPhotos();
+    const totalOk = toNum(document.querySelector('#total-m3').value) > 0;
+    const precioOk = toNum(document.querySelector('#precio').value) > 0;
+    const finanEl = document.querySelector('#finan');
+    if (finanEl && (finanEl.value === '' || finanEl.value == null)) finanEl.value = '0';
+    const finanOk = finanEl ? !isNaN(parseFloat(finanEl.value.replace(',','.'))) : true;
+    const payOk = paymentsOK();
+    return (dniOk && sedeOk && fechaOk && fotosOk && totalOk && precioOk) && finanOk && payOk;
+  }
+  function diffsOK(){
+    const lim = 50;
+    const v1 = Math.abs(toNum(document.querySelector('#st-diftotal').textContent));
+    const v2 = Math.abs(toNum(document.querySelector('#st-diftarjeta').textContent));
+    const v3 = Math.abs(toNum(document.querySelector('#st-difqr').textContent));
+    const v4 = Math.abs(toNum(document.querySelector('#st-difef').textContent));
+    return v1<=lim && v2<=lim && v3<=lim && v4<=lim;
+  }
+  function despOK(){
+    const panels = Array.from(document.querySelectorAll('#ventas-panels .ventas-panel'));
+    for (const p of panels){
+      const fields = p.querySelectorAll('input.desp');
+      for (const f of fields){ if ((f.value||'').trim()==='') return false; }
+    }
+    return true;
+  }
+  function updateUI(){
+    const readyBasics = basicsOK();
+    const readyDiffs  = diffsOK();
+    const readyDesp   = despOK();
+
+    const share   = document.querySelector('#btn-share');
+    const copyBtn = document.querySelector('#btn-copy');
+    const printBtn= document.querySelector('#btn-print');
+    const card    = document.querySelector('#actions-card');
+    const contact = document.querySelector('#btn-contact-inline');
+    const msg     = document.querySelector('#action-msg');
+
+    const lim = 20;
+    const difTotal = Math.abs(toNum((document.querySelector('#st-diftotal')?.textContent)||(document.querySelector('#st-diftotal')?.value)||0));
+    // Mostrar la carta de acciones solo cuando la base está completa
+    if (card) card.style.display = readyBasics ? 'block' : 'none';
+
+    const allFilled   = readyBasics && readyDesp;
+    const canWhats    = allFilled && readyDiffs;
+    const canCopy     = canWhats;
+    const showContact = (Math.abs(difTotal) > lim);
+
+    if (share){   share.style.display   = canWhats ? 'inline-block' : 'none'; share.disabled = !canWhats; }
+    if (copyBtn){ copyBtn.style.display = canCopy  ? 'inline-block' : 'none'; copyBtn.disabled = !canCopy; }
+    if (printBtn){ printBtn.style.display = canCopy ? 'inline-block' : 'none'; printBtn.disabled = !canCopy; }
+    if (contact){ contact.style.display = showContact ? 'inline-block' : 'none'; }
+
+    let msgText = '';
+    if (!readyBasics){
+      msgText = 'Completa fotos (GNV e Izipay), fecha, DNI y sede para continuar.';
+    } else if (!readyDesp){
+      msgText = '⚠️ Faltan datos: completa todos los campos N° desp. (“0” es válido).';
+    } else if (!readyDiffs){
+      const v = toNum((document.querySelector('#st-diftotal')?.textContent)||(document.querySelector('#st-diftotal')?.value)||0);
+      msgText = '⚠️ La Dif. total vs sistema (S/ '+v.toFixed(2)+') supera el umbral ±S/ '+lim+'.';
+    }
+    if (msg){
+      msg.textContent = msgText;
+      msg.setAttribute('aria-hidden','true');
+    }
+    showActionToast(msgText);
+  }
+  function unitLabel(){ return (Array.from(document.querySelectorAll('input[name="area"]')).find(r=>r.checked)||{}).value==='Líquidos'?'Galones':'M3'; }
+  
+  function buildDenomsText(){
+    const rows = [];
+    document.querySelectorAll('#den-bills .den-row, #den-coins .den-row').forEach(row=>{
+      const v = parseFloat((row.querySelector('.den-value')?.textContent||'0').replace(',', '.'));
+      const q = parseInt(row.querySelector('input')?.value || '0', 10);
+      if (q > 0) rows.push('• S/ ' + v + ' × ' + q + ' = ' + fmt(v * q));
+    });
+    return rows.length ? rows.join('\n') : '• Sin denominaciones registradas';
+  }
+    
+  function buildReport(){
+    const surts=[document.querySelector('#s1').checked?'1':'',document.querySelector('#s2').checked?'2':''].filter(Boolean).join(',')||'N/A';
+    const vv = getVentasValues();
+    const L=[];
+    L.push('*Cierre de Turno*');
+    L.push('*Fecha:* '+(document.querySelector('#fecha').value||'')+'   *Turno:* '+((Array.from(document.querySelectorAll('input[name="turno"]')).find(r=>r.checked)||{}).value||'')+'   *Surtidor:* '+surts);
+    L.push('*Área:* '+((Array.from(document.querySelectorAll('input[name="area"]')).find(r=>r.checked)||{}).value||'')+'   *DNI:* '+(document.querySelector('#dni').value||'')+'   *Sede:* '+(document.querySelector('#sede').value||''));
+    L.push('');
+    L.push('*Totales*');
+    L.push('• Precio: '+(document.querySelector('#precio').value||'2.40'));
+    L.push('• Total '+unitLabel()+': '+(document.querySelector('#total-m3').value||'0')+' | S/: '+document.querySelector('#total-s').textContent+' | N° Desp: '+(document.querySelector('#ndesp').value||'0'));
+    L.push('• Financiación: '+document.querySelector('#finan').value);
+    L.push('• Suma sistema S/: '+document.querySelector('#suma-sis').textContent);
+    L.push('');
+    L.push('*Detalle ventas*');
+    L.push('• Débito:   '+fmt(vv.debM)+' '+unitLabel()+' | S/: '+fmt(vv.debS)+' | Desp: '+vv.debD);
+    L.push('• Crédito:  '+fmt(vv.creM)+' '+unitLabel()+' | S/: '+fmt(vv.creS)+' | Desp: '+vv.creD);
+    L.push('• Efectivo: '+fmt(vv.efeM)+' '+unitLabel()+' | S/: '+fmt(vv.efeS)+' | Desp: '+vv.efeD);
+    L.push('• Otros:    '+(document.querySelector('#otros').value||'0'));
+    L.push('');
+    L.push('*Denominaciones*');
+    L.push(buildDenomsText());
+    L.push('• Total S/: '+document.querySelector('#efectivo-total').textContent);
+    L.push('');
+    L.push('*Izipay*');
+    L.push('• Tarjeta (Crédito) S/: '+(document.querySelector('#tarjeta').value||'0'));
+    L.push('• QR (Débito) S/: '+(document.querySelector('#qr').value||'0'));
+    L.push('');
+    L.push('*Estado del cierre*');
+    const tol=0.005;
+    function diffLine(lbl,val){ return (Math.abs(val)<=tol?'✅':'❌')+' '+lbl+': '+fmt(val); }
+    const v1=parseFloat(document.querySelector('#st-diftotal').textContent), v2=parseFloat(document.querySelector('#st-diftarjeta').textContent), v3=parseFloat(document.querySelector('#st-difqr').textContent), v4=parseFloat(document.querySelector('#st-difef').textContent);
+    L.push(diffLine('Dif. total vs sistema',v1));
+    const obs=(document.querySelector('#obs').value||'').trim(); if(obs){ L.push(''); L.push('*Observaciones*'); L.push(obs); }
+    return L.join('\n');
+  }
+  function makeReportPdfBlob(reportText){
+    try{
+      const encoder = new TextEncoder();
+      const sanitized = String(reportText || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[•▪●]/g,'-')
+        .replace(/[×✕✖]/g,'x')
+        .replace(/–/g,'-')
+        .replace(/✅/g,'OK')
+        .replace(/❌/g,'X')
+        .replace(/⚠️/g,'Alerta')
+        .replace(/[\u{1F000}-\u{1FFFF}]/gu,'');
+      const escapePdf = s => s.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
+      const lines = sanitized.replace(/\r\n/g,'\n').split('\n');
+      const contentParts = [
+        'BT',
+        '/F1 10 Tf',
+        '12 TL',
+        '24 820 Td'
+      ];
+      lines.forEach((line, idx)=>{
+        const safe = escapePdf(line);
+        if(idx===0) contentParts.push(`(${safe}) Tj`);
+        else {
+          contentParts.push('T*');
+          contentParts.push(`(${safe}) Tj`);
+        }
+      });
+      contentParts.push('ET');
+      const contentStream = contentParts.join('\n');
+      const contentLength = encoder.encode(contentStream).length;
+      const objects = [
+        '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n',
+        '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n',
+        '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 240 841] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj\n',
+        `4 0 obj << /Length ${contentLength} >> stream\n${contentStream}\nendstream\nendobj\n`,
+        '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Courier >> endobj\n'
+      ];
+      let pdf = '%PDF-1.4\n';
+      const offsets = ['0000000000 65535 f \n'];
+      objects.forEach(obj=>{
+        offsets.push(String(pdf.length).padStart(10,'0')+' 00000 n \n');
+        pdf += obj;
+      });
+      const startXref = pdf.length;
+      pdf += 'xref\n0 '+offsets.length+'\n'+offsets.join('')+'trailer\n<< /Size '+offsets.length+' /Root 1 0 R >>\nstartxref\n'+startXref+'\n%%EOF';
+      return new Blob([pdf], { type: 'application/pdf' });
+    }catch(err){
+      console.error('Error generando PDF', err);
+      return null;
+    }
+  }
+  async function doShare(){
+    const text = buildReport();
+    const photosGnv = typeof getGnv === 'function' ? getGnv() : [];
+    if(!photosGnv.length){
+      alert('Primero sube la foto de GNV para compartir.');
+      return;
+    }
+
+    const gnvSource = photosGnv[0];
+    let gnvBlob = null;
+    let gnvName = 'constancia-gnv-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.jpg';
+    if (gnvSource instanceof File){
+      gnvBlob = gnvSource;
+      gnvName = gnvSource.name || gnvName;
+    } else if (gnvSource){
+      try{
+        const tmp = await fetch(URL.createObjectURL(gnvSource)).then(r=>r.blob());
+        gnvBlob = new File([tmp], gnvName, { type: tmp.type || 'image/jpeg' });
+      }catch(_){ gnvBlob = null; }
+    }
+    if(!(gnvBlob instanceof File)){
+      showActionToast('No se pudo preparar la foto de GNV para compartir.');
+      return;
+    }
+
+    const shareTitle = 'Constancia GNV/Izipay';
+    const sharePayload = { files:[gnvBlob], text, title: shareTitle };
+
+    const fallbackWhatsApp = () => {
+      const phone='51937260860';
+      const url='https://api.whatsapp.com/send?phone='+phone+'&text='+encodeURIComponent(text);
+      window.open(url,'_blank','noopener');
+    };
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function'){
+      try{
+        await navigator.share(sharePayload);
+        return;
+      }catch(err){
+        if (err && err.name === 'AbortError') return;
+        console.warn('navigator.share no pudo adjuntar la imagen de GNV:', err);
+      }
+    }
+
+    fallbackWhatsApp();
+    if (gnvBlob){
+      const link = document.createElement('a');
+      const href = URL.createObjectURL(gnvBlob);
+      link.href = href;
+      link.download = gnvName;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(()=>{
+        URL.revokeObjectURL(href);
+        link.remove();
+      }, 0);
+      showActionToast('Adjunta la foto de GNV descargada cuando envíes el mensaje.');
+      return;
+    }
+    showActionToast('No se pudo preparar la foto de GNV. Intenta nuevamente.');
+  }
+  document.querySelector('#btn-share').onclick=async()=>{ if(!document.querySelector('#btn-share').disabled) await doShare(); };
+  // Imprimir reporte 80mm (incluye imagen unida si existe)
+  function printReport80(){
+    const report = buildReport();
+    const pdf = makeReportPdfBlob(report);
+    if(!pdf){
+      alert('No se pudo generar el PDF del reporte.');
+      return;
+    }
+    const url = URL.createObjectURL(pdf);
+    const timestamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cierre-turno-${timestamp}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(()=>{
+      link.remove();
+      URL.revokeObjectURL(url);
+    }, 1200);
+  }
+  document.querySelector('#btn-copy').onclick=async()=>{
+    if(document.querySelector('#btn-copy').disabled) return;
+    const text = buildReport();
+    const okMsg = 'Texto copiado al portapapeles.';
+    try{
+      if (navigator?.clipboard?.writeText){
+        await navigator.clipboard.writeText(text);
+        showActionToast(okMsg);
+        return;
+      }
+      throw new Error('Clipboard API no disponible');
+    }catch(err){
+      try{
+        if (navigator?.clipboard?.write){
+          const blob = new Blob([text], { type: 'text/plain' });
+          const item = new ClipboardItem({ 'text/plain': blob });
+          await navigator.clipboard.write([item]);
+          showActionToast(okMsg);
+          return;
+        }
+      }catch(_){ }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly','true');
+      ta.style.position = 'absolute';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      let copied = false;
+      try{ copied = document.execCommand('copy'); }
+      catch(_){ copied = false; }
+      document.body.removeChild(ta);
+      if (copied) showActionToast(okMsg);
+      else {
+        showActionToast('No se pudo copiar automáticamente; revisa el texto mostrado.');
+        setTimeout(()=>alert(text),100);
+      }
+    }
+  };
+  document.querySelector('#btn-print').onclick=()=>{ if(!document.querySelector('#btn-print').disabled) printReport80(); };
+  document.addEventListener('click', (e)=>{
+    if(e.target && (e.target.id==='btn-contact' || e.target.id==='btn-contact-inline')){
+      const text = 'Ayuda con Cierre de Turno\nFecha: '+(document.querySelector('#fecha').value||'')+'\nDNI: '+(document.querySelector('#dni').value||'')+'\nSede: '+(document.querySelector('#sede').value||'')+'\nDif. total vs sistema: S/ '+document.querySelector('#st-diftotal').textContent+'\nMensaje: Solicito activación/soporte para continuar.';
+      const phone='51965737361';
+      const url='https://api.whatsapp.com/send?phone='+phone+'&text='+encodeURIComponent(text);
+      window.open(url,'_blank','noopener');
+    }
+  });
+  document.addEventListener('DOMContentLoaded',()=>{ updateUI(); });
+  recalc(); updateConstHelper(); updateUI();
+  // ===== Cambiar color según área seleccionada =====
+(function(){
+  const radios = document.querySelectorAll('input[name="area"]');
+  function applyMode(){
+    const val = (Array.from(radios).find(r=>r.checked)||{}).value || 'GNV';
+    document.body.classList.toggle('gnv-mode', val === 'GNV');
+    document.body.classList.toggle('liq-mode', val !== 'GNV');
+  }
+  radios.forEach(r=>r.addEventListener('change', applyMode));
+  applyMode(); // inicial
+})();
+
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // --- Tarjeta y QR ---
+  ['#tarjeta', '#qr'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    // sin valor inicial
+    el.value = '';
+    el.placeholder = '0.00';
+  });
+
+  const obsField = document.getElementById('obs');
+  if (obsField && obsField.value === 'Sin observaciones.'){
+    obsField.value = '';
+  }
+
+  // --- Denominaciones ---
+  document.querySelectorAll('#den-bills input, #den-coins input').forEach(inp => {
+    inp.value = '';
+    inp.placeholder = '0';
+  });
+
+  // Si vuelves a renderizar denominaciones, vuelve a aplicar placeholders
+  const target = document.getElementById('den-bills')?.parentElement;
+  if (target) {
+    const obs = new MutationObserver(() => {
+      document.querySelectorAll('#den-bills input, #den-coins input').forEach(inp => {
+        inp.placeholder = '0';
+      });
+    });
+    obs.observe(target, { childList: true, subtree: true });
+  }
+});
+</script>
+<script>
+/* --- Parche: permitir placeholder en Tarjeta/QR (no autollenar con 0) --- */
+(function(){
+  const ids = ['tarjeta','qr'];
+
+  // 1) Quita el 0 inicial y pone placeholder 0.00
+  function prime(){
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.value = '';                // vacío visual
+      el.placeholder = '0.00';
+    });
+  }
+  document.addEventListener('DOMContentLoaded', prime);
+
+  // 2) Bloquea el listener global que convertía "" -> "0"
+  document.addEventListener('input', function(e){
+    const t = e.target;
+    if(!t || !(t instanceof HTMLInputElement)) return;
+    if(!ids.includes(t.id)) return;
+
+    // Si el campo quedó vacío, evitamos que otros listeners le pongan "0"
+    if(t.value === ''){
+      e.stopImmediatePropagation();
+      // Recalcula igual (vacío cuenta como 0)
+      try{ typeof recalc==='function' && recalc(); typeof updateUI==='function' && updateUI(); }catch{}
+    }
+  }, true); // <-- en captura para adelantarnos al handler original
+
+  // 3) Reemplaza paymentsOK para que NO escriba "0" en Tarjeta/QR
+  window.paymentsOK = function(){
+    const tar = document.getElementById('tarjeta');
+    const qr  = document.getElementById('qr');
+    const toNumLoc = v => parseFloat(String(v).replace(',','.'));
+
+    // válidos si están vacíos o si son número
+    const tarOk = tar ? (tar.value === '' || !isNaN(toNumLoc(tar.value))) : true;
+    const qrOk  = qr  ? (qr.value  === '' || !isNaN(toNumLoc(qr.value)))  : true;
+
+    // Denominaciones: validamos pero no forzamos a "0"
+    let cashOk = true;
+    const sels = ['#efectivo-denominaciones input','.efectivo-denominaciones input','.denominaciones input','input[data-role="den-qty"]','input[data-denom]'];
+    const seen = new Set();
+    sels.forEach(sel=>document.querySelectorAll(sel).forEach(el=>{
+      if(seen.has(el)) return; seen.add(el);
+      const ro = el.hasAttribute('readonly') || el.getAttribute('aria-readonly')==='true';
+      if (ro) return;
+      if (el.value !== '' && isNaN(toNumLoc(el.value))) cashOk = false;
+    }));
+    return tarOk && qrOk && cashOk;
+  };
+
+  // 4) Recalcular valores tratando vacío como 0 (recalc ya usa toNum('')=0)
+  //    No necesitamos tocar recalc; solo nos aseguramos de iniciar limpios.
+})();
+</script>
+<script>
+(function fixDenWidths(){
+  const sel = '#den-bills .den-input input, #den-coins .den-input input';
+  function clean(scope=document){
+    scope.querySelectorAll(sel).forEach(inp=>{
+      inp.style.width = ''; // borra ancho inline
+    });
+  }
+  document.addEventListener('DOMContentLoaded', clean);
+  new MutationObserver(()=>clean()).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
+<!-- JS de mejoras visuales (hover, marcado editable, no-motion, etc.) -->
+<script defer="" src="assets/app.js"></script>
+<div id="action-toast" role="status" aria-live="polite"></div>
+</body>
+</html>
