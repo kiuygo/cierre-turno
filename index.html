@@ -938,7 +938,7 @@
       const qty = Math.round(toNum(qtyTxt));
       if (qty > 0 && val > 0){
         const total = val * qty;
-        const line = `S/${fmtReportVal(val)} (${fmtQty(qty)}): ${fmtReportVal(total)}`;
+        const line = `${fmtReportVal(val)} (${fmtQty(qty)}): ${fmtReportVal(total)}`;
         rows.push(line);
       }
     });
@@ -975,27 +975,27 @@
     const obs=(document.querySelector('#obs').value||'').trim();
 
     const L=[
-      'CIERRE DE TURNO',
-      `fecha: ${fecha}`,
-      `turno: ${turno || '—'} | surtidor: ${surts}`,
+      '*CIERRE DE TURNO*',
+      `Fecha: ${fecha}`,
+      `Turno: ${turno || '—'} | Surtidor: ${surts}`,
       `DNI: ${dni}`,
       '',
-      'TOTALES',
+      '*TOTALES*',
       `M3: ${totalM} | S/: ${totalS}`,
-      `Financ: ${finan} | G. Total: ${sumaSis}`,
+      `Financ: ${finan} | *G. Total: ${sumaSis}*`,
       '',
-      'MEDIOS DE PAGO',
+      '*MEDIOS DE PAGO*',
       ...denomBlock,
       `Efectivo S/: ${efectivoTotal}`,
       `Tarjetas S/: ${tarjeta} | QR S/: ${qr}`,
-      `Total S/: ${stContado}`,
+      `*Total S/: ${stContado}*`,
       '',
-      'ESTADO DEL CIERRE',
-      diffLine('Dif total',v1)
+      '*ESTADO DEL CIERRE*',
+      diffLine('Dif Total',v1)
     ];
     if(obs){
       L.push('');
-      L.push('OBSERVACIONES');
+      L.push('*OBSERVACIONES*');
       L.push(obs);
     }
     const report = L.join('\n').replace(/\n{3,}/g,'\n\n').trim();
