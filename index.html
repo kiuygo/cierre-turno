@@ -1043,7 +1043,8 @@
 
     const shareTitle = 'Constancia GNV/Izipay';
     const shareFiles = shareFile ? [shareFile] : [];
-    const sharePayload = { files: shareFiles, text, title: shareTitle };
+    const sharePayload = { text, title: shareTitle };
+    if (shareFiles.length) sharePayload.files = shareFiles;
 
     const fallbackWhatsApp = () => {
       const phone='51937260860';
@@ -1051,14 +1052,16 @@
       window.open(url,'_blank','noopener');
     };
 
-    const canShareFiles = shareFiles.length && navigator?.canShare?.({ files: shareFiles });
-    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function' && canShareFiles){
-      try{
-        await navigator.share(sharePayload);
-        return;
-      }catch(err){
-        if (err && err.name === 'AbortError') return;
-        console.warn('navigator.share no pudo adjuntar la constancia unida:', err);
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function'){
+      const canShare = !shareFiles.length || typeof navigator.canShare !== 'function' || navigator.canShare({ files: shareFiles });
+      if (canShare){
+        try{
+          await navigator.share(sharePayload);
+          return;
+        }catch(err){
+          if (err && err.name === 'AbortError') return;
+          console.warn('navigator.share no pudo adjuntar la constancia unida:', err);
+        }
       }
     }
 
