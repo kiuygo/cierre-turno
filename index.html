@@ -671,6 +671,15 @@
   }
 })();
 
+// Helpers
+  function onDocReady(fn){
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once:true });
+    } else {
+      fn();
+    }
+  }
+
 // Unidad dinámica
   function unit(){ return (Array.from(document.querySelectorAll('input[name="area"]')).find(r=>r.checked)||{}).value==='Líquidos'?'Galones':'M3'; }
   function updateLabels(){
@@ -683,10 +692,12 @@
     // Re-calcular para actualizar el reporte
     if (typeof recalc === 'function') recalc();
   }
-  // Asegurar que updateLabels se llame cuando cambia el área
-  Array.from(document.querySelectorAll('input[name="area"]')).forEach(r=>r.addEventListener('change', updateLabels));
-  // Llamar al inicio para establecer labels correctos
-  updateLabels();
+  onDocReady(()=>{
+    // Asegurar que updateLabels se llame cuando cambia el área
+    Array.from(document.querySelectorAll('input[name="area"]')).forEach(r=>r.addEventListener('change', updateLabels));
+    // Llamar al inicio para establecer labels correctos
+    updateLabels();
+  });
 
     // Paneles de ventas por surtidor
   function makeVentasPanel(label, key){
@@ -738,32 +749,27 @@
     }
   }
 
-  document.querySelector('#s1').addEventListener('change', renderVentasPanels);
-  document.querySelector('#s2').addEventListener('change', renderVentasPanels);
-  renderVentasPanels();
-
-  (function ensureOneSurtidor(){
-    const s1 = document.getElementById('s1');
-    const s2 = document.getElementById('s2');
+  function ensureOneSurtidor(s1, s2){
     if(!s1 || !s2) return;
-
     function guard(e){
-      // Si el usuario desmarca el último activo, lo reactivamos
       if(!s1.checked && !s2.checked){
-        // reactiva el que el usuario tocó para no frustrar la acción
         (e && e.target === s2 ? s2 : s1).checked = true;
       }
-      // re-render para respetar tu lógica de paneles
-      if (typeof renderVentasPanels === 'function') renderVentasPanels();
+      renderVentasPanels();
       if (typeof updateUI === 'function') updateUI();
     }
     s1.addEventListener('change', guard);
     s2.addEventListener('change', guard);
-
-    // Estado inicial: asegúrate de que haya al menos uno activo
     if(!s1.checked && !s2.checked){ s1.checked = true; }
     guard();
-  })();
+  }
+
+  onDocReady(()=>{
+    const s1 = document.querySelector('#s1');
+    const s2 = document.querySelector('#s2');
+    ensureOneSurtidor(s1, s2);
+    renderVentasPanels();
+  });
 
   function getVentasValues(){
     const precio = toNum(document.querySelector('#precio').value||2.4);
