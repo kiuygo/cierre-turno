@@ -367,7 +367,7 @@
     <div class="icon-row">
       <button id="btn-share" class="btn filled" disabled style="display:none">🟢 WhatsApp</button>
       <button id="btn-copy" class="btn outlined" disabled style="display:none">📋 Copiar texto</button>
-      <button id="btn-print" class="btn outlined" disabled style="display:none">🖨️ Guardar PDF</button>
+      <button id="btn-print" class="btn outlined" disabled style="display:none">🖨️ Imprimir 80mm</button>
       <button id="btn-contact-inline" class="btn tonal" style="display:none">📞 Contactar soporte</button>
     </div>
     <div id="action-msg" class="helper" style="margin-top:6px;"></div>
@@ -938,7 +938,7 @@
       const qty = Math.round(toNum(qtyTxt));
       if (qty > 0 && val > 0){
         const total = val * qty;
-        const line = `S/${fmtReportVal(val)} (x${fmtQty(qty)}): ${fmtReportVal(total)}`;
+        const line = `S/${fmtReportVal(val)} (${fmtQty(qty)}): ${fmtReportVal(total)}`;
         rows.push(line);
       }
     });
@@ -962,8 +962,11 @@
     const efectivoTotal = fmtReportVal(document.querySelector('#efectivo-total')?.textContent);
     const tol=0.005;
     function diffLine(lbl,val){
-      const status = Math.abs(val)<=tol ? 'OK' : 'ALERTA';
-      return `${lbl}: ${fmtReportVal(val)} (${status})`;
+      const diff = toNum(val);
+      const abs = Math.abs(diff);
+      const icon = abs<=tol ? '✅' : (diff<0 ? '❗' : '⚠️');
+      const status = abs<=tol ? '' : (diff<0 ? ' (Faltante)' : ' (Sobrante)');
+      return `${icon} ${lbl}: ${fmtReportVal(diff)}${status}`;
     }
     const v1=toNum(document.querySelector('#st-diftotal')?.textContent);
     const stContado = fmtReportVal(document.querySelector('#st-contado')?.textContent);
@@ -975,7 +978,7 @@
       'CIERRE DE TURNO',
       `fecha: ${fecha}`,
       `turno: ${turno || '—'} | surtidor: ${surts}`,
-      `DNI: ${dni} | área: ${area || '—'} | sede: ${sede}`,
+      `DNI: ${dni}`,
       '',
       'TOTALES',
       `M3: ${totalM} | S/: ${totalS}`,
@@ -1009,6 +1012,7 @@
         .replace(/✅/g,'OK')
         .replace(/❌/g,'X')
         .replace(/⚠️/g,'Alerta')
+        .replace(/❗/g,'Faltante')
         .replace(/[\u{1F000}-\u{1FFFF}]/gu,'');
       const escapePdf = s => s.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
       const lines = sanitized.replace(/\r\n/g,'\n').split('\n');
@@ -1119,25 +1123,42 @@
     showActionToast('No se pudo preparar la constancia unida. Intenta nuevamente.');
   }
   document.querySelector('#btn-share').onclick=async()=>{ if(!document.querySelector('#btn-share').disabled) await doShare(); };
-  // Imprimir reporte 80mm (incluye imagen unida si existe)
-  function printReport80(){
+  // Imprimir reporte 80mm (abre diálogo de impresión)
+  async function printReport80(){
     const report = buildReport();
-    const pdf = makeReportPdfBlob(report);
-    if(!pdf){
-      alert('No se pudo generar el PDF del reporte.');
+    const escapeHtml = s => String(s||'')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;');
+    const reportHtml = escapeHtml(report).replace(/\n/g,'<br>');
+    const printWindow = window.open('', '_blank', 'noopener,width=420,height=640');
+    if(!printWindow){
+      alert('No se pudo abrir la ventana de impresión. Revisa los bloqueadores emergentes.');
       return;
     }
-    const url = URL.createObjectURL(pdf);
-    const timestamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `cierre-turno-${timestamp}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(()=>{
-      link.remove();
-      URL.revokeObjectURL(url);
-    }, 1200);
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Cierre de Turno - 80mm</title>
+  <style>
+    @page { size: 80mm auto; margin: 5mm 4mm; }
+    body { margin:0; font-family: "Courier New", Courier, monospace; background:#fff; color:#111; }
+    .ticket { width: 72mm; margin: 0 auto; padding: 0; }
+    .ticket-pre { white-space: normal; font-size: 12px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <div class="ticket">
+    <div class="ticket-pre">${reportHtml}</div>
+  </div>
+  <script>
+    window.onload = function(){ setTimeout(function(){ window.print(); }, 120); };
+  <\\/script>
+</body>
+</html>`;
+    printWindow.document.write(html);
+    printWindow.document.close();
   }
   document.querySelector('#btn-copy').onclick=async()=>{
     if(document.querySelector('#btn-copy').disabled) return;
@@ -1178,7 +1199,7 @@
       }
     }
   };
-  document.querySelector('#btn-print').onclick=()=>{ if(!document.querySelector('#btn-print').disabled) printReport80(); };
+  document.querySelector('#btn-print').onclick=async()=>{ if(!document.querySelector('#btn-print').disabled) await printReport80(); };
   document.addEventListener('click', (e)=>{
     if(e.target && (e.target.id==='btn-contact' || e.target.id==='btn-contact-inline')){
       const text = 'Ayuda con Cierre de Turno\nFecha: '+(document.querySelector('#fecha').value||'')+'\nDNI: '+(document.querySelector('#dni').value||'')+'\nSede: '+(document.querySelector('#sede').value||'')+'\nDif. total vs sistema: S/ '+document.querySelector('#st-diftotal').textContent+'\nMensaje: Solicito activación/soporte para continuar.';
