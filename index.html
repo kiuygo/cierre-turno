@@ -833,6 +833,7 @@
     document.querySelectorAll('#ventas-panels .ventas-panel input.desp').forEach(el=>{
       el.classList.toggle('auto', (el.value||'').trim()==='');
     });
+    shadeTargets();
     updateUI();
   }
   Array.from(document.querySelectorAll('input,select,textarea')).forEach(el=>{ el.addEventListener('input', recalc); el.addEventListener('change', recalc); });
@@ -1010,31 +1011,33 @@
   }
   async function doShare(){
     const text = buildReport();
-    const photosGnv = typeof getGnv === 'function' ? getGnv() : [];
-    if(!photosGnv.length){
-      alert('Primero sube la foto de GNV para compartir.');
+    if (!validPhotos()){
+      alert('Primero sube las fotos de GNV e Izipay para compartir.');
       return;
     }
 
-    const gnvSource = photosGnv[0];
-    let gnvBlob = null;
-    let gnvName = 'constancia-gnv-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.jpg';
-    if (gnvSource instanceof File){
-      gnvBlob = gnvSource;
-      gnvName = gnvSource.name || gnvName;
-    } else if (gnvSource){
-      try{
-        const tmp = await fetch(URL.createObjectURL(gnvSource)).then(r=>r.blob());
-        gnvBlob = new File([tmp], gnvName, { type: tmp.type || 'image/jpeg' });
-      }catch(_){ gnvBlob = null; }
+    try{
+      if (!(mergedConstanciaBlob instanceof Blob)){
+        await mergeConstanciaImagesVertical();
+      }
+    }catch(err){
+      console.error('No se pudo generar la constancia unida antes de compartir:', err);
     }
-    if(!(gnvBlob instanceof File)){
-      showActionToast('No se pudo preparar la foto de GNV para compartir.');
+
+    if (!(mergedConstanciaBlob instanceof Blob)){
+      showActionToast('No se pudo preparar la constancia unida para compartir.');
       return;
     }
+
+    const nowIso = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+    const constanciaName = mergedConstanciaName || `constancia-${nowIso}.jpg`;
+    const shareFile = (typeof File === 'function')
+      ? new File([mergedConstanciaBlob], constanciaName, { type: mergedConstanciaBlob.type || 'image/jpeg' })
+      : null;
 
     const shareTitle = 'Constancia GNV/Izipay';
-    const sharePayload = { files:[gnvBlob], text, title: shareTitle };
+    const shareFiles = shareFile ? [shareFile] : [];
+    const sharePayload = { files: shareFiles, text, title: shareTitle };
 
     const fallbackWhatsApp = () => {
       const phone='51937260860';
@@ -1042,32 +1045,35 @@
       window.open(url,'_blank','noopener');
     };
 
-    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function'){
+    const canShareFiles = shareFiles.length && navigator?.canShare?.({ files: shareFiles });
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function' && canShareFiles){
       try{
         await navigator.share(sharePayload);
         return;
       }catch(err){
         if (err && err.name === 'AbortError') return;
-        console.warn('navigator.share no pudo adjuntar la imagen de GNV:', err);
+        console.warn('navigator.share no pudo adjuntar la constancia unida:', err);
       }
     }
 
     fallbackWhatsApp();
-    if (gnvBlob){
+
+    const downloadBlob = shareFile || mergedConstanciaBlob;
+    if (downloadBlob){
       const link = document.createElement('a');
-      const href = URL.createObjectURL(gnvBlob);
+      const href = URL.createObjectURL(downloadBlob);
       link.href = href;
-      link.download = gnvName;
+      link.download = constanciaName;
       document.body.appendChild(link);
       link.click();
       setTimeout(()=>{
         URL.revokeObjectURL(href);
         link.remove();
       }, 0);
-      showActionToast('Adjunta la foto de GNV descargada cuando envíes el mensaje.');
+      showActionToast('Adjunta la constancia unida descargada cuando envíes el mensaje.');
       return;
     }
-    showActionToast('No se pudo preparar la foto de GNV. Intenta nuevamente.');
+    showActionToast('No se pudo preparar la constancia unida. Intenta nuevamente.');
   }
   document.querySelector('#btn-share').onclick=async()=>{ if(!document.querySelector('#btn-share').disabled) await doShare(); };
   // Imprimir reporte 80mm (incluye imagen unida si existe)

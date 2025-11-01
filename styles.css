@@ -1,0 +1,427 @@
+﻿/* ===================================================================
+   Cierre de Turno – styles.css
+   Móvil primero · Verde GNV / Azul Líquidos · UI compacta y consistente
+   =================================================================== */
+
+/* ---------- Tokens base ---------- */
+:root{
+  --bg-start:#F1F5F9; --bg-end:#F8FAFC;
+  --text:#0F172A; --muted:#475569; --card-bg:#FFFFFF;
+  --primary:#2563EB; --primary-600:#1D4ED8; --primary-700:#1E40AF;
+  --success:#16A34A; --danger:#DC2626; --alert:#FACC15;
+  --shadow:0 12px 24px rgba(2,6,23,.08);
+  --radius:18px;
+
+  /* Alturas / radios uniformes para campos */
+  --field-height: 40px;
+  --field-radius: 10px;
+  --field-padding-x: 12px;
+
+  /* Campos numéricos (tinte) */
+  --num-bg: color-mix(in oklab,var(--primary) 8%, var(--card-bg));
+  --num-bg-focus: color-mix(in oklab,var(--primary) 10%, var(--card-bg));
+  --num-bd: 1.5px solid color-mix(in oklab,var(--primary) 40%, var(--card-bg));
+  --num-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(0,0,0,.04);
+  --ph-color: color-mix(in oklab,var(--muted) 80%, var(--text));
+}
+
+/* Temas por área (se alternan con body.area-gnv / .area-liquidos) */
+body.area-gnv{
+  --primary:#16A34A; --primary-600:#15803D; --primary-700:#166534;
+  --num-bg: color-mix(in oklab,var(--primary) 8%, var(--card-bg));
+  --num-bg-focus: color-mix(in oklab,var(--primary) 10%, var(--card-bg));
+  --num-bd: 1.5px solid color-mix(in oklab,var(--primary) 40%, var(--card-bg));
+}
+body.area-liquidos{
+  --primary:#2563EB; --primary-600:#1D4ED8; --primary-700:#1E40AF;
+  --num-bg: color-mix(in oklab,var(--primary) 8%, var(--card-bg));
+  --num-bg-focus: color-mix(in oklab,var(--primary) 10%, var(--card-bg));
+  --num-bd: 1.5px solid color-mix(in oklab,var(--primary) 40%, var(--card-bg));
+}
+
+/* Cuando un campo ya tiene valor, quitamos el tinte de área (confirmación visual) */
+/* Se usa la clase .filled que asigna JS al completar el campo */
+body.area-gnv .textfield input.filled:not([readonly]):not(.auto),
+body.area-gnv .den-input input.filled{
+  background: linear-gradient(180deg,color-mix(in oklab,var(--card-bg) 96%,white 4%),var(--card-bg)) !important;
+  border:1px solid rgba(2,6,23,.14) !important;
+  box-shadow:none !important;
+}
+body.area-liquidos .textfield input.filled:not([readonly]):not(.auto),
+body.area-liquidos .den-input input.filled{
+  background: linear-gradient(180deg,color-mix(in oklab,var(--card-bg) 96%,white 4%),var(--card-bg)) !important;
+  border:1px solid rgba(2,6,23,.14) !important;
+  box-shadow:none !important;
+}
+
+/* A small helper: inputs that are filled keep a slightly bolder text for clarity */
+.textfield input.filled{ font-weight:600 !important; color:inherit !important }
+
+/* Modo oscuro del sistema */
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg-start:#0B1220; --bg-end:#0F172A; --text:#E5E7EB; --muted:#94A3B8; --card-bg:#0F172A;
+    --primary:#60A5FA; --primary-600:#3B82F6; --primary-700:#2563EB;
+    --movement:#67E8F9; --alert:#FDE047; --success:#22C55E; --danger:#F87171;
+    --ring:color-mix(in oklab,var(--primary) 70%,black); --shadow:0 12px 30px rgba(0,0,0,.45);
+  }
+}
+
+/* ---------- Base ---------- */
+html{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+body{
+  margin:0; background:linear-gradient(180deg,var(--bg-start),var(--bg-end)); color:var(--text);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  transition:background .420ms ease, color 240ms ease;
+}
+*,*::before,*::after{ box-sizing:border-box; }
+img,svg,canvas,video{ max-width:100%; height:auto; }
+
+/* ---------- App bar como carta ---------- */
+.app-bar{ position:static !important; padding:0 !important; }
+.app-bar-inner{ max-width:1080px; margin:0 auto; padding:0 16px; }
+.app-card{
+  background:linear-gradient(180deg,color-mix(in oklab,var(--card-bg) 92%,white 8%),var(--card-bg));
+  border:1px solid rgba(2,6,23,.08); border-radius:var(--radius); box-shadow:var(--shadow);
+  padding:6px 24px; text-align:center;
+}
+.app-card h1{ margin:0; font-size:20px; font-weight:700; color:var(--primary-700); letter-spacing:-.3px }
+.app-card p{ margin:6px 0 0; font-size:14px; color:var(--muted) }
+@media (min-width:600px){ .app-card{ padding-left:120px; } }
+
+/* ---------- Cards ---------- */
+.card,section,fieldset{
+  background:linear-gradient(180deg,color-mix(in oklab,var(--card-bg) 92%,white 8%),var(--card-bg));
+  border-radius:18px;border:1px solid rgba(2,6,23,.08);box-shadow:var(--shadow);padding:16px;margin:12px 0;
+  transition:background-color .42s cubic-bezier(.2,.7,.2,1),border-color .42s cubic-bezier(.2,.7,.2,1),box-shadow .42s ease,transform .28s ease,filter .42s ease;
+  animation:slideBlurIn .38s cubic-bezier(.2,.7,.2,1) both; contain:content
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(2,6,23,.14)}
+@keyframes slideBlurIn{from{opacity:0;transform:translateY(8px);filter:blur(2px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+@media (prefers-reduced-motion:reduce){ .card,section,fieldset{ animation:none !important } }
+
+/* ---------- Grids ---------- */
+.row-3{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px }
+@media (max-width:720px){ .row-3{ grid-template-columns:1fr } }
+.row-2{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+@media (max-width:680px){ .row-2{ grid-template-columns:1fr } }
+.row-2.efectivo-header{grid-template-columns:minmax(0,1fr) auto;}
+@media (max-width:680px){ .row-2.efectivo-header{grid-template-columns:minmax(0,1fr); row-gap:8px; justify-items:flex-start;}}
+
+/* ---------- Textfields (altura unificada) ---------- */
+.textfield{ display:grid; gap:6px }
+.textfield>label{ font-size:12.5px; color:var(--muted); line-height:1.2 }
+.textfield input:not([type=checkbox]):not([type=radio]),
+.textfield select,
+.textfield textarea{
+  height:var(--field-height) !important; min-height:var(--field-height) !important;
+  padding:0 var(--field-padding-x) !important; border-radius:var(--field-radius) !important; line-height:1 !important;
+  width:100%; border:1px solid rgba(2,6,23,.14);
+  background:linear-gradient(180deg,color-mix(in oklab,var(--card-bg) 94%,white 6%),var(--card-bg));
+  outline:none; transition:border-color .24s ease,box-shadow .24s ease,background-color .24s ease;
+}
+
+/* Numéricos con tinte (no readonly) */
+:where(.textfield) :is(input[type="number"], input[inputmode="decimal"], input[inputmode="numeric"]):not([readonly]){
+  background:var(--num-bg) !important; border:var(--num-bd) !important; border-radius:12px !important;
+  box-shadow:var(--num-shadow) !important; font-size:15px; font-weight:500; color:inherit !important;
+}
+:where(.textfield) input::placeholder{ color:var(--ph-color); opacity:.8 }
+:where(.textfield) :is(input[type="number"], input[inputmode="decimal"], input[inputmode="numeric"]):not([readonly]):focus-visible{
+  border-color:var(--primary) !important; background:var(--num-bg-focus) !important;
+}
+
+
+
+/* Fecha y Sede con tinte numérico */
+:where(.textfield) :is(input[type="date"], select):not([readonly]):not([disabled]){
+  background: var(--num-bg) !important; border: var(--num-bd) !important; border-radius: 12px !important;
+  box-shadow: var(--num-shadow) !important; color: inherit !important; padding: 10px 12px !important; font-weight: 500;
+}
+
+
+/* ---------- Chips Área / Turno compactos ---------- */
+.segmented[role="radiogroup"]{ display:flex; flex-wrap:wrap; gap:.4rem }
+.segmented[role="radiogroup"] input[type="radio"]{ position:absolute; opacity:0; pointer-events:none }
+.segmented[role="radiogroup"] label{
+  min-height:36px; padding:.35rem .75rem; border-radius:999px; font-size:14px; font-weight:600;
+  border:1px solid #cbd5e1; background:#fff; color:#0f172a; box-shadow:0 1px 2px rgba(15,23,42,.06);
+  transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease;
+}
+.segmented[role="radiogroup"] input[type="radio"]:checked + label{
+  border-color: color-mix(in srgb, var(--primary) 55%, #cbd5e1);
+  background: color-mix(in srgb, var(--primary) 10%, #fff);
+  color: color-mix(in srgb, var(--primary) 80%, black);
+  box-shadow: 0 1px 8px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+/* ---------- Surtidor chips en fila (1/2) ---------- */
+.textfield:has(> .checkbox){ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center }
+.textfield:has(> .checkbox) > label{ flex-basis:100%; margin-bottom:.25rem }
+.checkbox{ display:inline-flex; align-items:center; gap:.5rem; }
+.checkbox input[type="checkbox"]{ position:absolute; opacity:0; pointer-events:none }
+.checkbox label{
+  width: var(--field-height); height: var(--field-height); border-radius:10px; font-weight:700; font-size:14px;
+  border:1px solid #cbd5e1; background:#fff; display:inline-flex; align-items:center; justify-content:center;
+}
+.checkbox label::after{ content:none !important } /* sin ✓ */
+body.area-gnv .checkbox input[type="checkbox"]:checked + label{ border-color: color-mix(in srgb,#16a34a 50%,#cbd5e1); background: color-mix(in srgb,#16a34a 12%,#fff); color:#166534 }
+body.area-liquidos .checkbox input[type="checkbox"]:checked + label{ border-color: color-mix(in srgb,#2563eb 50%,#cbd5e1); background: color-mix(in srgb,#2563eb 12%,#fff); color:#1e40af }
+
+/* Chip flotante — SOLO aplica al float */
+/* Botón + subrayado (compacto) para botones, radios y checkboxes */
+:is(button,.btn,input[type=submit],input[type=button],.segmented>label,.checkbox>label){ position:relative;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid color-mix(in oklab,var(--primary) 28%,var(--text) 6%);background:linear-gradient(180deg,color-mix(in oklab,var(--primary) 12%,var(--card-bg)),var(--card-bg));color:var(--text);cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background-color .18s ease}
+:is(button,.btn,input[type=submit],input[type=button],.segmented>label,.checkbox>label):hover{transform:translateY(-1px);box-shadow:0 12px 22px color-mix(in oklab,var(--primary) 22%,transparent);border-color:var(--primary)}
+:is(button,.btn,input[type=submit],input[type=button],.segmented>label,.checkbox>label)::after{content:"";position:absolute;left:10px;right:10px;bottom:6px;height:2px;background:linear-gradient(90deg,var(--primary),var(--movement));opacity:0;transform:translateY(3px);transition:transform .25s ease,opacity .25s ease;border-radius:999px;pointer-events:none}
+:is(button,.btn,input[type=submit],input[type=button],.segmented>label,.checkbox>label):hover::after{opacity:.9;transform:translateY(0)}
+/* Icon-label buttons for Izipay/GNV actions (compact, targeted) */
+:is(label.icon-btn[aria-label="Tomar foto Izipay"],label.icon-btn[aria-label="Adjuntar foto GNV"],label.icon-btn[aria-label="Tomar foto GNV"],label.icon-btn[aria-label="Adjuntar foto Izipay"]) { position:relative;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid color-mix(in oklab,var(--primary) 28%,var(--text) 6%);background:linear-gradient(180deg,color-mix(in oklab,var(--primary) 12%,var(--card-bg)),var(--card-bg));color:var(--text);cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background-color .18s ease}
+:is(label.icon-btn[aria-label="Tomar foto Izipay"],label.icon-btn[aria-label="Adjuntar foto GNV"],label.icon-btn[aria-label="Tomar foto GNV"],label.icon-btn[aria-label="Adjuntar foto Izipay"]):hover { transform:translateY(-1px);box-shadow:0 12px 22px color-mix(in oklab,var(--primary) 22%,transparent);border-color:var(--primary) }
+:is(label.icon-btn[aria-label="Tomar foto Izipay"],label.icon-btn[aria-label="Adjuntar foto GNV"],label.icon-btn[aria-label="Tomar foto GNV"],label.icon-btn[aria-label="Adjuntar foto Izipay"])::after { content:"";position:absolute;left:10px;right:10px;bottom:6px;height:2px;background:linear-gradient(90deg,var(--primary),var(--movement));opacity:0;transform:translateY(3px);transition:transform .25s ease,opacity .25s ease;border-radius:999px;pointer-events:none}
+:is(label.icon-btn[aria-label="Tomar foto Izipay"],label.icon-btn[aria-label="Adjuntar foto GNV"],label.icon-btn[aria-label="Tomar foto GNV"],label.icon-btn[aria-label="Adjuntar foto Izipay"]):hover::after { opacity:.9;transform:translateY(0) }
+/* Layout y visibilidad para fila de íconos */
+.icon-row,button,.btn,input[type=submit],input[type=button],.segmented>label,.checkbox>label,label.icon-btn[aria-label="Tomar foto Izipay"],label.icon-btn[aria-label="Adjuntar foto GNV"],label.icon-btn[aria-label="Tomar foto GNV"],label.icon-btn[aria-label="Adjuntar foto Izipay"]{display:flex; gap:8px; flex-wrap:wrap; background: linear-gradient(180deg, color-mix(in oklab, var(--card-bg) 95%, white 5%), var(--card-bg)); padding:6px; border-radius:14px; border:1px solid rgba(2,6,23,.08); }
+.icon-row .icon-btn,button,.btn,input[type=submit],input[type=button],.segmented>label,.checkbox>label,label.icon-btn[aria-label="Tomar foto Izipay"],label.icon-btn[aria-label="Adjuntar foto GNV"],label.icon-btn[aria-label="Tomar foto GNV"],label.icon-btn[aria-label="Adjuntar foto Izipay"]{border-radius:999px; padding:10px 14px; border:1px solid transparent; background:transparent; font-weight:600; position:relative; isolation:isolate; overflow:hidden; }
+
+#actions-card{
+  margin-top:20px;
+}
+#actions-card .icon-row{
+  width:100%;
+  justify-content:flex-start;
+  gap:12px;
+  background:transparent;
+  border:none;
+  padding:0;
+  flex-wrap:wrap;
+}
+#actions-card .icon-row .btn{
+  flex:1 1 180px;
+  justify-content:center;
+}
+@media(max-width:640px){
+  #actions-card .icon-row{
+    flex-direction:column;
+    gap:10px;
+  }
+  #actions-card .icon-row .btn{
+    width:100%;
+    flex:1 1 auto;
+  }
+}
+#action-msg{
+  display:none !important;
+}
+#action-toast{
+  position:fixed;
+  top:12px;
+  left:16px;
+  transform:translateY(-10px);
+  max-width:min(95vw,520px);
+  padding:12px 16px;
+  min-width:260px;
+  border-radius:14px;
+  background:rgba(15,23,42,0.92);
+  color:#fff;
+  font-size:14px;
+  box-shadow:0 18px 38px rgba(15,23,42,.35);
+  z-index:140;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease;
+}
+@media(max-width:640px){
+  #action-toast{
+    left:12px;
+    right:12px;
+    transform:translateY(-10px);
+    text-align:left;
+  }
+}
+#action-toast.show{
+  opacity:1;
+  transform:translateY(0);
+}
+
+
+/* Asegurar que los campos del estado del cierre siempre estén limpios */
+.card:first-of-type .textfield output,
+.card:first-of-type .valuefield,
+#st-diftotal, #st-declarado, #st-contado, #st-diftarjeta, #st-difqr, #st-difef, #efectivo-total, #suma-sis,
+#total-s, #finan, #ndesp, output.soles.deb.auto, output.soles.cre.auto, output.soles.efe.auto {
+  display: inline-block !important;
+  padding: 4px 10px !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  border-radius: 0 !important;
+  font-weight: 700 !important;
+  font-size: 1.05rem !important;
+}
+
+/* Asegurar que la clase ghost no agregue estilos no deseados */
+.valuefield.ghost,
+.card:first-of-type .valuefield.ghost {
+  border: none !important;
+  background: none !important;
+  padding: 4px 10px !important;
+}
+
+/* ===================================================================
+   Denominaciones – compacto, alineado y estable (2–4 columnas)
+   =================================================================== */
+
+/* Layout del contenedor (auto-fit; 4 cols en desktop) */
+.efectivo .den-grid{
+  display:grid; gap:14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top:8px;
+}
+@media (min-width:1024px){ .efectivo .den-grid{ grid-template-columns: repeat(4, 1fr); } }
+@media (min-width:800px) and (max-width:1023px){ .efectivo .den-grid{ grid-template-columns: repeat(2, 1fr) !important; } }
+
+/* Variables de columnas fijas para cada fila */
+:root{
+  --den-val-w: 64px;          /* 200, 100, 50... */
+  --den-gap-s: 8px;
+  --den-qty-w: 44px;          /* cuadrito cantidad */
+  --den-qty-h: 24px;          /* alto del cuadrito */
+  --den-total-w: 72px;        /* ancho mínimo del total */
+  --den-radius: 8px;
+  --den-font: 15px;           /* tamaño de texto apenas mayor */
+}
+
+/* Paneles de ventas: cuando hay 2, en móviles deben apilarse */
+#ventas-panels.grid-2{
+  display:grid;
+  gap:12px;
+  grid-template-columns: 1fr;        /* móvil: una debajo de la otra */
+}
+@media (min-width: 900px){
+  #ventas-panels.grid-2{ grid-template-columns: 1fr 1fr; }
+}
+
+/* Fila de denominación (sin guiones) */
+.den-row{
+  display:grid;
+  grid-template-columns:
+    var(--den-val-w)              /*valor*/
+    16px                          /*×*/
+    var(--den-qty-w)              /*cantidad*/
+    16px                          /*=*/
+    minmax(var(--den-total-w), auto); /*total*/
+  align-items:center;
+  column-gap: var(--den-gap-s);
+  padding:0 !important;
+  font-size: var(--den-font);
+}
+.den-row > *{ white-space:nowrap }
+.den-row > *:where(:not(.den-value,.den-times,.den-input,.den-equal,.den-result)){ display:none } /* oculta nodos extra (p.ej. guiones) */
+/* sin líneas entre filas */
+.den-row{
+  border-bottom: 0 !important;
+  padding: 2px 0 !important;
+  column-gap: 6px; /* menos separación */
+}
+/* valor de la denominación */
+.den-value{ text-align:center; }
+.den-times,.den-equal{ text-align:center; opacity:.7; }
+/* total por fila: alinear a la derecha y dar ancho mínimo cómodo */
+.den-result{ text-align:right; font-weight:600; min-width:60px; }
+
+
+/* Cantidad compacta y centrada */
+.den-input input{
+  width:var(--den-qty-w) !important; height:var(--den-qty-h) !important; line-height:var(--den-qty-h) !important;
+  text-align:center !important; padding:0 3px !important; border-radius:var(--den-radius); font-size:var(--den-font);
+  background:var(--num-bg) !important; border:var(--num-bd) !important; box-shadow:var(--num-shadow) !important; color:inherit !important;
+}
+.den-input input:focus-visible{ border-color:var(--primary) !important; background:var(--num-bg-focus) !important }
+
+.efectivo-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-top:12px}
+.efectivo-header .textfield{flex:1 1 auto; min-width:180px;}
+.den-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:0;justify-content:flex-end;align-items:center;height:auto}
+.den-actions .segmented{
+  display:inline-flex;
+  border-radius:999px;
+  border:1px solid color-mix(in oklab,var(--primary) 35%, #cbd5e1 65%);
+  overflow:hidden;
+  background:#fff;
+  align-items:center;
+}
+.den-actions .segmented button{
+  border:0;
+  background:transparent;
+  padding:8px 16px;
+  min-height:40px;
+  font-weight:600;
+  font-size:14px;
+  cursor:pointer;
+  color:#0f172a;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:background .2s ease,color .2s ease;
+}
+.den-actions .segmented button:hover{
+  background:color-mix(in oklab,var(--primary) 12%, #f8fafc);
+  color:color-mix(in oklab,var(--primary) 70%, #0f172a);
+}
+.den-actions .segmented button:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--primary) 60%, white);
+  outline-offset:2px;
+}
+@media(max-width:680px){
+  .efectivo-header{flex-wrap:wrap; justify-content:flex-start;}
+  .den-actions{justify-content:flex-start;}
+  .den-actions .segmented button{width:auto;}
+}
+
+/* =================================================================== */
+:focus-visible{ outline:3px solid color-mix(in srgb, var(--primary) 60%, white); outline-offset:2px }
+@media (prefers-reduced-motion:reduce){
+  *{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important }
+}
+
+
+
+/* ===================================================================
+   Final override: asegurar que inputs marcados .filled pierdan el tinte
+   (esto se coloca al final para vencer selectores con !important
+    definidos anteriormente en el archivo o en inline styles).
+   =================================================================== */
+body.area-gnv .textfield input.filled:not([readonly]),
+body.area-liquidos .textfield input.filled:not([readonly]),
+.den-input input.filled,
+.textfield input.filled {
+  background: linear-gradient(180deg,color-mix(in oklab,var(--card-bg) 96%,white 4%),var(--card-bg)) !important;
+  border: 1px solid rgba(2,6,23,.14) !important;
+  box-shadow: none !important;
+  color: inherit !important;
+}
+
+/* también cubrir outputs que puedan recibir .filled por JS */
+output.filled, .valuefield.filled {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+/* Constancia – iconos compactos y sin contenedores grandes */
+#constancia .icon-row{ display:flex; gap:6px; align-items:center; padding:2px 0; background:transparent; border:0; }
+#constancia :is(label.icon-btn, button.icon-btn, a.icon-btn){ font-size:14px; padding:6px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(2,6,23,.12); background:transparent; border-radius:999px; box-shadow:none; }
+#constancia :is(label.icon-btn, button.icon-btn, a.icon-btn):hover{ border-color: color-mix(in oklab, var(--primary) 60%, rgba(2,6,23,.12)); }
+#constancia .chips{ display:grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap:8px; max-height: 180px; overflow:auto; }
+#constancia .chip{ display:block; padding:4px; border-radius:8px; background:transparent; border:0; }
+#constancia .chip img{ width:100%; height:72px; object-fit:cover; display:block; border-radius:6px; }
+#constancia .chip .btn, #constancia .chip button{ display:none !important; }
+/* Grid de Constancia: 1 → 2 → 3 columnas (desktop a partir de ~980px) */
+#constancia .const-row{ display:grid; grid-template-columns: 1fr; gap:14px; align-items:start; }
+@media (min-width: 720px){ #constancia .const-row{ grid-template-columns: 1fr 1fr; } }
+@media (min-width: 980px){ #constancia .const-row{ grid-template-columns: 1fr 1fr 1fr; } }
+#merge-result.show{ display:block !important; }
+.den-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;justify-content:flex-start}
+.den-actions .segmented{display:inline-flex; border-radius:999px; border:1px solid color-mix(in oklab,var(--primary) 35%, #cbd5e1 65%); overflow:hidden; background:#fff;}
+.den-actions .segmented button{border:0; background:transparent; padding:10px 18px; font-weight:600; font-size:14px; cursor:pointer; color:#0f172a; transition:background .2s ease,color .2s ease; display:inline-flex; align-items:center; gap:8px;}
+.den-actions .segmented button:hover{background:color-mix(in oklab,var(--primary) 12%, #f8fafc); color:color-mix(in oklab,var(--primary) 70%, #0f172a);}
+.den-actions .segmented button:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 60%, white); outline-offset:2px;}
