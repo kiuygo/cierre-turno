@@ -917,51 +917,84 @@
   }
   function unitLabel(){ return (Array.from(document.querySelectorAll('input[name="area"]')).find(r=>r.checked)||{}).value==='Líquidos'?'Galones':'M3'; }
   
-  function buildDenomsText(){
+  function buildDenomsText(inline=false){
     const rows = [];
     document.querySelectorAll('#den-bills .den-row, #den-coins .den-row').forEach(row=>{
       const v = parseFloat((row.querySelector('.den-value')?.textContent||'0').replace(',', '.'));
       const q = parseInt(row.querySelector('input')?.value || '0', 10);
-      if (q > 0) rows.push('• S/ ' + v + ' × ' + q + ' = ' + fmt(v * q));
+      if (q > 0){
+        const base = 'S/ ' + fmt(v) + '×' + q + '=' + fmt(v * q);
+        rows.push(base);
+      }
     });
-    return rows.length ? rows.join('\n') : '• Sin denominaciones registradas';
+    if (!rows.length) return inline ? 'Sin denominaciones registradas' : '• Sin denominaciones registradas';
+    return inline ? rows.join('; ') : rows.join('\n');
   }
     
   function buildReport(){
     const surts=[document.querySelector('#s1').checked?'1':'',document.querySelector('#s2').checked?'2':''].filter(Boolean).join(',')||'N/A';
     const vv = getVentasValues();
-    const L=[];
-    L.push('*Cierre de Turno*');
-    L.push('*Fecha:* '+(document.querySelector('#fecha').value||'')+'   *Turno:* '+((Array.from(document.querySelectorAll('input[name="turno"]')).find(r=>r.checked)||{}).value||'')+'   *Surtidor:* '+surts);
-    L.push('*Área:* '+((Array.from(document.querySelectorAll('input[name="area"]')).find(r=>r.checked)||{}).value||'')+'   *DNI:* '+(document.querySelector('#dni').value||'')+'   *Sede:* '+(document.querySelector('#sede').value||''));
-    L.push('');
-    L.push('*Totales*');
-    L.push('• Precio: '+(document.querySelector('#precio').value||'2.40'));
-    L.push('• Total '+unitLabel()+': '+(document.querySelector('#total-m3').value||'0')+' | S/: '+document.querySelector('#total-s').textContent+' | N° Desp: '+(document.querySelector('#ndesp').value||'0'));
-    L.push('• Financiación: '+document.querySelector('#finan').value);
-    L.push('• Suma sistema S/: '+document.querySelector('#suma-sis').textContent);
-    L.push('');
-    L.push('*Detalle ventas*');
-    L.push('• Débito:   '+fmt(vv.debM)+' '+unitLabel()+' | S/: '+fmt(vv.debS)+' | Desp: '+vv.debD);
-    L.push('• Crédito:  '+fmt(vv.creM)+' '+unitLabel()+' | S/: '+fmt(vv.creS)+' | Desp: '+vv.creD);
-    L.push('• Efectivo: '+fmt(vv.efeM)+' '+unitLabel()+' | S/: '+fmt(vv.efeS)+' | Desp: '+vv.efeD);
-    L.push('• Otros:    '+(document.querySelector('#otros').value||'0'));
-    L.push('');
-    L.push('*Denominaciones*');
-    L.push(buildDenomsText());
-    L.push('• Total S/: '+document.querySelector('#efectivo-total').textContent);
-    L.push('');
-    L.push('*Izipay*');
-    L.push('• Tarjeta (Crédito) S/: '+(document.querySelector('#tarjeta').value||'0'));
-    L.push('• QR (Débito) S/: '+(document.querySelector('#qr').value||'0'));
-    L.push('');
-    L.push('*Estado del cierre*');
+    const fecha = document.querySelector('#fecha')?.value || '';
+    const turno = (Array.from(document.querySelectorAll('input[name="turno"]')).find(r=>r.checked)||{}).value || '';
+    const area  = (Array.from(document.querySelectorAll('input[name="area"]')).find(r=>r.checked)||{}).value || '';
+    const dni   = document.querySelector('#dni')?.value || '';
+    const sede  = document.querySelector('#sede')?.value || '';
+    const precio = document.querySelector('#precio')?.value || '0.00';
+    const totalM = fmt(toNum(document.querySelector('#total-m3')?.value));
+    const totalS = document.querySelector('#total-s')?.textContent || '0.00';
+    const nDesp  = document.querySelector('#ndesp')?.value || '0';
+    const finan  = document.querySelector('#finan')?.value || '0.00';
+    const sumaSis= document.querySelector('#suma-sis')?.textContent || '0.00';
+    const otros  = fmt(toNum(document.querySelector('#otros')?.value));
+    const tarjeta= fmt(toNum(document.querySelector('#tarjeta')?.value));
+    const qr     = fmt(toNum(document.querySelector('#qr')?.value));
+    const denomLine = buildDenomsText(true);
+    const efectivoTotal = document.querySelector('#efectivo-total')?.textContent || '0.00';
+    const u = unitLabel();
+    const uShort = u === 'Galones' ? 'Gal' : 'M3';
     const tol=0.005;
     function diffLine(lbl,val){ return (Math.abs(val)<=tol?'✅':'❌')+' '+lbl+': '+fmt(val); }
-    const v1=parseFloat(document.querySelector('#st-diftotal').textContent), v2=parseFloat(document.querySelector('#st-diftarjeta').textContent), v3=parseFloat(document.querySelector('#st-difqr').textContent), v4=parseFloat(document.querySelector('#st-difef').textContent);
-    L.push(diffLine('Dif. total vs sistema',v1));
-    const obs=(document.querySelector('#obs').value||'').trim(); if(obs){ L.push(''); L.push('*Observaciones*'); L.push(obs); }
-    return L.join('\n');
+    const v1=parseFloat(document.querySelector('#st-diftotal').textContent)||0;
+    const v2=parseFloat(document.querySelector('#st-diftarjeta').textContent)||0;
+    const v3=parseFloat(document.querySelector('#st-difqr').textContent)||0;
+    const v4=parseFloat(document.querySelector('#st-difef').textContent)||0;
+    const obs=(document.querySelector('#obs').value||'').trim();
+
+    const L=[
+      '*Cierre de Turno*',
+      `Fecha: ${fecha || '—'} | Turno: ${turno || '—'} | Surt: ${surts}`,
+      `Área: ${area || '—'} | DNI: ${dni || '—'} | Sede: ${sede || '—'}`,
+      '',
+      '*Totales*',
+      `Precio S/: ${precio} | Total ${uShort}: ${totalM} | S/: ${totalS} | Desp: ${nDesp}`,
+      `Financ.: ${finan} | Suma Sis S/: ${sumaSis}`,
+      '',
+      '*Detalle ventas*',
+      `Déb: ${fmt(vv.debM)} ${uShort} | S/: ${fmt(vv.debS)} | Desp: ${vv.debD}`,
+      `Créd: ${fmt(vv.creM)} ${uShort} | S/: ${fmt(vv.creS)} | Desp: ${vv.creD}`,
+      `Efec: ${fmt(vv.efeM)} ${uShort} | S/: ${fmt(vv.efeS)} | Desp: ${vv.efeD}`,
+      `Otros S/: ${otros}`,
+      '',
+      '*Denominaciones*',
+      denomLine,
+      `Total S/: ${efectivoTotal}`,
+      '',
+      '*Medios de pago*',
+      `Tarjetas S/: ${tarjeta} | QR S/: ${qr}`,
+      '',
+      '*Estado del cierre*',
+      diffLine('Dif total',v1),
+      diffLine('Dif tarjetas',v2),
+      diffLine('Dif QR',v3),
+      diffLine('Dif efectivo',v4)
+    ];
+    if(obs){
+      L.push('');
+      L.push('*Observaciones*');
+      L.push(obs);
+    }
+    const report = L.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+    return report;
   }
   function makeReportPdfBlob(reportText){
     try{
