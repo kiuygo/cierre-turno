@@ -1094,22 +1094,25 @@
     let shareCompleted = false;
     let sharedWithFiles = false;
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function'){
-      try{
-        await navigator.share(sharePayload);
-        shareCompleted = true;
-        if (shareFiles.length) sharedWithFiles = true;
-      }catch(err){
-        if (err && err.name === 'AbortError') return;
-        console.warn('navigator.share no pudo adjuntar la constancia unida:', err);
-        if (shareFiles.length){
-          try{
-            await navigator.share({ text, title: shareTitle });
-            shareCompleted = true;
-            sharedWithFiles = false;
-          }catch(err2){
-            if (err2 && err2.name === 'AbortError') return;
-            console.warn('navigator.share solo texto también falló:', err2);
-          }
+      const supportsFiles = shareFiles.length ? (()=>{ try{ return typeof navigator.canShare === 'function' ? navigator.canShare({ files: shareFiles, text, title: shareTitle }) : true; }catch(_){ return false; } })() : false;
+      if (supportsFiles){
+        try{
+          await navigator.share(sharePayload);
+          shareCompleted = true;
+          sharedWithFiles = true;
+        }catch(err){
+          if (err && err.name === 'AbortError') return;
+          console.warn('navigator.share no pudo adjuntar la constancia unida:', err);
+        }
+      }
+      if (!shareCompleted){
+        try{
+          await navigator.share({ text, title: shareTitle });
+          shareCompleted = true;
+          sharedWithFiles = false;
+        }catch(err){
+          if (err && err.name === 'AbortError') return;
+          console.warn('navigator.share con solo texto también falló:', err);
         }
       }
     }
@@ -1151,48 +1154,21 @@
     showActionToast('No se pudo preparar la constancia unida. Intenta nuevamente.');
   }
   document.querySelector('#btn-share').onclick=async()=>{ if(!document.querySelector('#btn-share').disabled) await doShare(); };
-  // Imprimir reporte 80mm (vista previa HTML con línea de corte)
+  // Imprimir reporte 80mm (genera PDF text-only y lo abre en nueva pestaña)
   function printReport80(){
     const report = buildReport();
-    const escapeHtml = s => String(s||'')
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;');
-    const reportHtml = escapeHtml(report).replace(/\n/g,'<br>');
-    const printWindow = window.open('', '_blank', 'noopener,width=420,height=640');
-    if(!printWindow){
-      alert('No se pudo abrir la ventana de impresión. Revisa bloqueadores de ventanas emergentes.');
+    const reportForPdf = report + '\n------------------------------\nCORTE AQUI';
+    const pdf = makeReportPdfBlob(reportForPdf);
+    if(!pdf){
+      alert('No se pudo generar el PDF del reporte.');
       return;
     }
-    const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>Cierre de Turno - 80mm</title>
-  <style>
-    @page { size: 80mm auto; margin: 5mm 4mm; }
-    body { margin:0; font-family: "Courier New", Courier, monospace; background:#fff; color:#111; }
-    .ticket { width: 72mm; margin: 0 auto; padding: 0; }
-    .ticket-pre { white-space: normal; font-size: 12px; line-height: 1.4; }
-    .cut-line { margin: 12px 0 0; border-top: 2px dashed #999; padding-top: 6px; text-align:center; font-size:10px; letter-spacing:4px; }
-    @media print {
-      body { background:#fff; }
-      .cut-line::after { content: 'CORTE AQUI'; display:block; margin-top:4px; font-size:10px; letter-spacing:2px; }
+    const url = URL.createObjectURL(pdf);
+    const viewer = window.open(url, '_blank', 'noopener');
+    if(!viewer){
+      window.location.href = url;
     }
-  </style>
-</head>
-<body>
-  <div class="ticket">
-    <div class="ticket-pre">${reportHtml}</div>
-    <div class="cut-line" aria-hidden="true">--------------------------------</div>
-  </div>
-  <script>
-    window.onload = function(){ setTimeout(function(){ window.print(); }, 120); };
-  <\\/script>
-</body>
-</html>`;
-    printWindow.document.write(html);
-    printWindow.document.close();
+    setTimeout(()=>URL.revokeObjectURL(url), 60_000);
   }
   document.querySelector('#btn-copy').onclick=async()=>{
     if(document.querySelector('#btn-copy').disabled) return;
