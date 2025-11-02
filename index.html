@@ -367,7 +367,7 @@
     <div class="icon-row">
       <button id="btn-share" class="btn filled" disabled style="display:none">🟢 WhatsApp</button>
       <button id="btn-copy" class="btn outlined" disabled style="display:none">📋 Copiar texto</button>
-      <button id="btn-print" class="btn outlined" disabled style="display:none">🖨️ Imprimir</button>
+      <button id="btn-print" class="btn outlined" disabled style="display:none">🖨️ Imprimir 80mm</button>
       <button id="btn-contact-inline" class="btn tonal" style="display:none">📞 Contactar soporte</button>
     </div>
     <div id="action-msg" class="helper" style="margin-top:6px;"></div>
@@ -1077,7 +1077,7 @@
     const nowIso = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
     const constanciaName = mergedConstanciaName || `constancia-${nowIso}.jpg`;
     const shareFile = (typeof File === 'function')
-      ? new File([mergedConstanciaBlob], constanciaName, { type: mergedConstanciaBlob.type || 'image/jpeg' })
+      ? new File([mergedConstanciaBlob], constanciaName, { type: 'image/jpeg' })
       : null;
 
     const shareTitle = 'Constancia GNV/Izipay';
@@ -1092,17 +1092,44 @@
     };
 
     let shareCompleted = false;
+    let sharedWithFiles = false;
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function'){
       try{
         await navigator.share(sharePayload);
         shareCompleted = true;
+        if (shareFiles.length) sharedWithFiles = true;
       }catch(err){
         if (err && err.name === 'AbortError') return;
         console.warn('navigator.share no pudo adjuntar la constancia unida:', err);
+        if (shareFiles.length){
+          try{
+            await navigator.share({ text, title: shareTitle });
+            shareCompleted = true;
+            sharedWithFiles = false;
+          }catch(err2){
+            if (err2 && err2.name === 'AbortError') return;
+            console.warn('navigator.share solo texto también falló:', err2);
+          }
+        }
       }
     }
 
-    if (shareCompleted) return;
+    if (shareCompleted){
+      if (!sharedWithFiles && shareFile){
+        const link = document.createElement('a');
+        const href = URL.createObjectURL(shareFile);
+        link.href = href;
+        link.download = constanciaName;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(()=>{
+          URL.revokeObjectURL(href);
+          link.remove();
+        }, 0);
+        showActionToast('Descarga lista. Adjunta la constancia unida manualmente en el mensaje.');
+      }
+      return;
+    }
 
     fallbackWhatsApp();
 
@@ -1124,21 +1151,48 @@
     showActionToast('No se pudo preparar la constancia unida. Intenta nuevamente.');
   }
   document.querySelector('#btn-share').onclick=async()=>{ if(!document.querySelector('#btn-share').disabled) await doShare(); };
-  // Imprimir reporte 80mm (genera PDF y lo abre en nueva pestaña)
-  async function printReport80(){
+  // Imprimir reporte 80mm (vista previa HTML con línea de corte)
+  function printReport80(){
     const report = buildReport();
-    const pdf = makeReportPdfBlob(report);
-    if(!pdf){
-      alert('No se pudo generar el PDF del reporte.');
+    const escapeHtml = s => String(s||'')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;');
+    const reportHtml = escapeHtml(report).replace(/\n/g,'<br>');
+    const printWindow = window.open('', '_blank', 'noopener,width=420,height=640');
+    if(!printWindow){
+      alert('No se pudo abrir la ventana de impresión. Revisa bloqueadores de ventanas emergentes.');
       return;
     }
-    const url = URL.createObjectURL(pdf);
-    const preview = window.open(url, '_blank', 'noopener');
-    if(!preview){
-      // fallback si el bloqueo de ventanas impide abrir: usa navegación actual
-      window.location.href = url;
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Cierre de Turno - 80mm</title>
+  <style>
+    @page { size: 80mm auto; margin: 5mm 4mm; }
+    body { margin:0; font-family: "Courier New", Courier, monospace; background:#fff; color:#111; }
+    .ticket { width: 72mm; margin: 0 auto; padding: 0; }
+    .ticket-pre { white-space: normal; font-size: 12px; line-height: 1.4; }
+    .cut-line { margin: 12px 0 0; border-top: 2px dashed #999; padding-top: 6px; text-align:center; font-size:10px; letter-spacing:4px; }
+    @media print {
+      body { background:#fff; }
+      .cut-line::after { content: 'CORTE AQUI'; display:block; margin-top:4px; font-size:10px; letter-spacing:2px; }
     }
-    setTimeout(()=>URL.revokeObjectURL(url), 60_000);
+  </style>
+</head>
+<body>
+  <div class="ticket">
+    <div class="ticket-pre">${reportHtml}</div>
+    <div class="cut-line" aria-hidden="true">--------------------------------</div>
+  </div>
+  <script>
+    window.onload = function(){ setTimeout(function(){ window.print(); }, 120); };
+  <\\/script>
+</body>
+</html>`;
+    printWindow.document.write(html);
+    printWindow.document.close();
   }
   document.querySelector('#btn-copy').onclick=async()=>{
     if(document.querySelector('#btn-copy').disabled) return;
@@ -1179,7 +1233,7 @@
       }
     }
   };
-  document.querySelector('#btn-print').onclick=async()=>{ if(!document.querySelector('#btn-print').disabled) await printReport80(); };
+  document.querySelector('#btn-print').onclick=()=>{ if(!document.querySelector('#btn-print').disabled) printReport80(); };
   document.addEventListener('click', (e)=>{
     if(e.target && (e.target.id==='btn-contact' || e.target.id==='btn-contact-inline')){
       const text = 'Ayuda con Cierre de Turno\nFecha: '+(document.querySelector('#fecha').value||'')+'\nDNI: '+(document.querySelector('#dni').value||'')+'\nSede: '+(document.querySelector('#sede').value||'')+'\nDif. total vs sistema: S/ '+document.querySelector('#st-diftotal').textContent+'\nMensaje: Solicito activación/soporte para continuar.';
