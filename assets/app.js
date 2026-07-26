@@ -10,8 +10,8 @@
     precio: 2.50,
     waPhone: '51937260860',
     waSupport: '51965737361',
-    telegramToken: '',
-    telegramChatId: '',
+    telegramToken: '8707994105:AAF0j9-ZSgtBAoWAljtqrGQlsTbh4cum4gA',
+    telegramChatId: '-5341081719',
     operadores: {
       "12345678": "Operador A",
       "87654321": "Operador B"
