@@ -516,9 +516,16 @@
     clear && (clear.onclick=()=>{ files.splice(0); invalidateMerged(); render(); updateUI(); updateConstHelper(); });
     return ()=>files;
   }
-  const getGnv=bindPhoto('gnv');
-  const getIzi=bindPhoto('izipay');
-  const validPhotos=()=>getGnv().length>=1 && getIzi().length>=1;
+  const validPhotos = () => {
+    const tarjeta = toNum(document.querySelector('#tarjeta')?.value);
+    const qr = toNum(document.querySelector('#qr')?.value);
+    const needsIzi = (tarjeta > 0 || qr > 0);
+    const iziCount = getIzi().length;
+    if (needsIzi) {
+      return iziCount >= 1;
+    }
+    return true;
+  };
   window.getGnv = getGnv;
   window.getIzi = getIzi;
   window.validPhotos = validPhotos;
@@ -896,8 +903,18 @@
   function despOK(){
     const panels = Array.from(document.querySelectorAll('#ventas-panels .ventas-panel'));
     for (const p of panels){
-      const fields = p.querySelectorAll('input.desp');
-      for (const f of fields){ if ((f.value||'').trim()==='') return false; }
+      const types = ['deb', 'cre', 'efe'];
+      for (const type of types) {
+        const m3Inp = p.querySelector(`.m3.${type}`);
+        const despInp = p.querySelector(`.desp.${type}`);
+        if (m3Inp && despInp) {
+          const m3Val = toNum(m3Inp.value);
+          const despVal = (despInp.value || '').trim();
+          if (m3Val > 0 && despVal === '') {
+            return false;
+          }
+        }
+      }
     }
     return true;
   }
