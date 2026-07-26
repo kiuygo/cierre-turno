@@ -464,12 +464,17 @@
     }
     return actionToastEl;
   }
+  let actionToastTimer = null;
   function showActionToast(message){
     const toast = getActionToast();
     if(!toast) return;
+    if (actionToastTimer) clearTimeout(actionToastTimer);
     if(message){
       toast.textContent = message;
       toast.classList.add('show');
+      actionToastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
     } else {
       toast.textContent = '';
       toast.classList.remove('show');

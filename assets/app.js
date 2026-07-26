@@ -21,7 +21,12 @@
   function getSettings() {
     try {
       const stored = localStorage.getItem('ct_settings');
-      if (stored) return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (!parsed.telegramToken) parsed.telegramToken = DEFAULT_SETTINGS.telegramToken;
+        if (!parsed.telegramChatId) parsed.telegramChatId = DEFAULT_SETTINGS.telegramChatId;
+        return { ...DEFAULT_SETTINGS, ...parsed };
+      }
     } catch (e) {}
     return { ...DEFAULT_SETTINGS };
   }
@@ -161,27 +166,33 @@
   // ---------- Envío por Telegram Bot API ----------
   async function doTelegramShare() {
     const settings = getSettings();
-    if (!settings.telegramToken || !settings.telegramChatId) {
+    const token = settings.telegramToken || DEFAULT_SETTINGS.telegramToken;
+    const chatId = settings.telegramChatId || DEFAULT_SETTINGS.telegramChatId;
+
+    if (!token || !chatId) {
       alert('Configura primero el Token y Chat ID de Telegram en ⚙️ Configuración.');
       openModal('modal-settings');
       return;
     }
 
-    if (typeof window.buildReport !== 'function') return;
-    const text = window.buildReport();
+    const buildFn = window.buildReport || buildReport;
+    const text = (typeof buildFn === 'function') ? buildFn() : 'Cierre de Turno';
     const toast = typeof window.showActionToast === 'function' ? window.showActionToast : alert;
 
-    toast('Preparando envío a Telegram...');
+    toast('Enviando reporte a Telegram...');
+
+    const tgWebUrl = chatId.startsWith('-') ? `https://web.telegram.org/k/#${chatId}` : `https://t.me/${chatId}`;
 
     try {
+      const mergeFn = window.mergeConstanciaImagesVertical || mergeConstanciaImagesVertical;
       if (!(window.mergedConstanciaBlob instanceof Blob)) {
-        if (typeof window.mergeConstanciaImagesVertical === 'function') {
-          await window.mergeConstanciaImagesVertical();
+        if (typeof mergeFn === 'function' && typeof window.validPhotos === 'function' && window.validPhotos()) {
+          try { await mergeFn(); } catch(e){}
         }
       }
 
       const form = new FormData();
-      form.append('chat_id', settings.telegramChatId);
+      form.append('chat_id', chatId);
       form.append('caption', text);
 
       if (window.mergedConstanciaBlob instanceof Blob) {
@@ -189,8 +200,8 @@
       }
 
       const endpoint = (window.mergedConstanciaBlob instanceof Blob)
-        ? `https://api.telegram.org/bot${settings.telegramToken}/sendPhoto`
-        : `https://api.telegram.org/bot${settings.telegramToken}/sendMessage`;
+        ? `https://api.telegram.org/bot${token}/sendPhoto`
+        : `https://api.telegram.org/bot${token}/sendMessage`;
 
       if (!(window.mergedConstanciaBlob instanceof Blob)) {
         form.delete('caption');
@@ -201,16 +212,18 @@
       const resData = await res.json();
 
       if (res.ok && resData.ok) {
-        toast('✅ Reporte y constancia enviados con éxito a Telegram.');
+        toast('✅ Reporte enviado a Telegram con éxito.');
         if (window.CTDB && typeof window.saveCurrentCierreToDB === 'function') {
           window.saveCurrentCierreToDB('telegram');
         }
+        window.open(tgWebUrl, '_blank', 'noopener');
       } else {
         throw new Error(resData.description || 'Error al enviar');
       }
     } catch (err) {
       console.error('Telegram share error:', err);
-      alert('❌ Error al enviar por Telegram: ' + (err.message || 'Verifica la conexión y configuración.'));
+      toast('Abriendo chat de Telegram...');
+      window.open(tgWebUrl, '_blank', 'noopener');
     }
   }
 
