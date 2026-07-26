@@ -183,7 +183,6 @@
       const form = new FormData();
       form.append('chat_id', settings.telegramChatId);
       form.append('caption', text);
-      form.append('parse_mode', 'Markdown');
 
       if (window.mergedConstanciaBlob instanceof Blob) {
         form.append('photo', window.mergedConstanciaBlob, window.mergedConstanciaName || 'constancia.jpg');
@@ -195,7 +194,6 @@
 
       if (!(window.mergedConstanciaBlob instanceof Blob)) {
         form.delete('caption');
-        form.delete('parse_mode');
         form.append('text', text);
       }
 

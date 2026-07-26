@@ -446,9 +446,9 @@
   try{ document.querySelector('#fecha').valueAsDate=new Date(); }catch{}
   document.addEventListener('DOMContentLoaded',()=>{ const oldFloat=document.getElementById('float-diftotal'); if(oldFloat) oldFloat.remove(); });
 
-  let mergedConstanciaBlob = null;
-  let mergedConstanciaUrl = '';
-  let mergedConstanciaName = '';
+  window.mergedConstanciaBlob = null;
+  window.mergedConstanciaUrl = '';
+  window.mergedConstanciaName = '';
 
   let actionToastEl = null;
   function getActionToast(){
@@ -514,6 +514,11 @@
   const getGnv=bindPhoto('gnv');
   const getIzi=bindPhoto('izipay');
   const validPhotos=()=>getGnv().length>=1 && getIzi().length>=1;
+  window.getGnv = getGnv;
+  window.getIzi = getIzi;
+  window.validPhotos = validPhotos;
+  window.showActionToast = showActionToast;
+
   function updateConstHelper(){
     const ok = validPhotos();
     const h = document.querySelector('#const-helper');
@@ -579,14 +584,14 @@
         }
       });
       const dstr = (`${fecha}-${hh}${mm}`).replace(/\//g,'-');
-      if (mergedConstanciaUrl){
-        try{ URL.revokeObjectURL(mergedConstanciaUrl); }catch(e){}
-        mergedConstanciaUrl = '';
+      if (window.mergedConstanciaUrl){
+        try{ URL.revokeObjectURL(window.mergedConstanciaUrl); }catch(e){}
+        window.mergedConstanciaUrl = '';
       }
-      mergedConstanciaBlob = blob;
-      mergedConstanciaName = `constancia-${dstr}.jpg`;
-      mergedConstanciaUrl = URL.createObjectURL(blob);
-      const previewUrl = mergedConstanciaUrl;
+      window.mergedConstanciaBlob = blob;
+      window.mergedConstanciaName = `constancia-${dstr}.jpg`;
+      window.mergedConstanciaUrl = URL.createObjectURL(blob);
+      const previewUrl = window.mergedConstanciaUrl;
       const chips = document.getElementById('merge-chips');
       const a    = document.getElementById('merge-download');
       if (chips){
@@ -896,12 +901,14 @@
     const readyDiffs  = diffsOK();
     const readyDesp   = despOK();
 
-    const share   = document.querySelector('#btn-share');
-    const copyBtn = document.querySelector('#btn-copy');
-    const printBtn= document.querySelector('#btn-print');
-    const card    = document.querySelector('#actions-card');
-    const contact = document.querySelector('#btn-contact-inline');
-    const msg     = document.querySelector('#action-msg');
+    const share    = document.querySelector('#btn-share');
+    const telegram = document.querySelector('#btn-telegram');
+    const copyBtn  = document.querySelector('#btn-copy');
+    const printBtn = document.querySelector('#btn-print');
+    const saveDbBtn= document.querySelector('#btn-save-db');
+    const card     = document.querySelector('#actions-card');
+    const contact  = document.querySelector('#btn-contact-inline');
+    const msg      = document.querySelector('#action-msg');
 
     const lim = 20;
     const difTotal = Math.abs(toNum((document.querySelector('#st-diftotal')?.textContent)||(document.querySelector('#st-diftotal')?.value)||0));
@@ -913,10 +920,12 @@
     const canCopy     = canWhats;
     const showContact = (Math.abs(difTotal) > lim);
 
-    if (share){   share.style.display   = canWhats ? 'inline-block' : 'none'; share.disabled = !canWhats; }
-    if (copyBtn){ copyBtn.style.display = canCopy  ? 'inline-block' : 'none'; copyBtn.disabled = !canCopy; }
-    if (printBtn){ printBtn.style.display = canCopy ? 'inline-block' : 'none'; printBtn.disabled = !canCopy; }
-    if (contact){ contact.style.display = showContact ? 'inline-block' : 'none'; }
+    if (share){    share.style.display    = canWhats ? 'inline-block' : 'none'; share.disabled = !canWhats; }
+    if (telegram){ telegram.style.display = canWhats ? 'inline-block' : 'none'; telegram.disabled = !canWhats; }
+    if (copyBtn){  copyBtn.style.display  = canCopy  ? 'inline-block' : 'none'; copyBtn.disabled = !canCopy; }
+    if (printBtn){ printBtn.style.display = canCopy  ? 'inline-block' : 'none'; printBtn.disabled = !canCopy; }
+    if (saveDbBtn){saveDbBtn.style.display= canCopy  ? 'inline-block' : 'none'; saveDbBtn.disabled = !canCopy; }
+    if (contact){  contact.style.display  = showContact ? 'inline-block' : 'none'; }
 
     let msgText = '';
     if (!readyBasics){
@@ -1007,6 +1016,8 @@
     const report = L.join('\n').replace(/\n{3,}/g,'\n\n').trim();
     return report;
   }
+  window.buildReport = buildReport;
+  window.mergeConstanciaImagesVertical = mergeConstanciaImagesVertical;
   function makeReportPdfBlob(reportText){
     try{
       const encoder = new TextEncoder();
@@ -1215,7 +1226,9 @@
       }
     }
   };
-  document.querySelector('#btn-print').onclick=()=>{ if(!document.querySelector('#btn-print').disabled) printReport80(); };
+  document.querySelector('#btn-print').onclick=()=>{ if(!document.querySelector('#btn-print').disabled) doPrint80mm(); };
+  const tgBtn = document.querySelector('#btn-telegram');
+  if (tgBtn) tgBtn.onclick = async () => { if (!tgBtn.disabled) await doTelegramShare(); };
   document.addEventListener('click', (e)=>{
     if(e.target && (e.target.id==='btn-contact' || e.target.id==='btn-contact-inline')){
       const text = 'Ayuda con Cierre de Turno\nFecha: '+(document.querySelector('#fecha').value||'')+'\nDNI: '+(document.querySelector('#dni').value||'')+'\nSede: '+(document.querySelector('#sede').value||'')+'\nDif. total vs sistema: S/ '+document.querySelector('#st-diftotal').textContent+'\nMensaje: Solicito activación/soporte para continuar.';
