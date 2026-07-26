@@ -175,13 +175,16 @@
       return;
     }
 
+    const tgWebUrl = chatId.startsWith('-') ? `https://web.telegram.org/k/#${chatId}` : `https://t.me/${chatId}`;
+
+    // Abrir ventana inmediatamente en la interacción del usuario para evitar que el navegador bloquee el popup
+    const targetWin = window.open(tgWebUrl, '_blank');
+
     const buildFn = window.buildReport || buildReport;
     const text = (typeof buildFn === 'function') ? buildFn() : 'Cierre de Turno';
     const toast = typeof window.showActionToast === 'function' ? window.showActionToast : alert;
 
     toast('Enviando reporte a Telegram...');
-
-    const tgWebUrl = chatId.startsWith('-') ? `https://web.telegram.org/k/#${chatId}` : `https://t.me/${chatId}`;
 
     try {
       const mergeFn = window.mergeConstanciaImagesVertical || mergeConstanciaImagesVertical;
@@ -216,14 +219,12 @@
         if (window.CTDB && typeof window.saveCurrentCierreToDB === 'function') {
           window.saveCurrentCierreToDB('telegram');
         }
-        window.open(tgWebUrl, '_blank', 'noopener');
       } else {
         throw new Error(resData.description || 'Error al enviar');
       }
     } catch (err) {
       console.error('Telegram share error:', err);
-      toast('Abriendo chat de Telegram...');
-      window.open(tgWebUrl, '_blank', 'noopener');
+      toast('❌ Error al enviar por Bot. Chat abierto.');
     }
   }
 
