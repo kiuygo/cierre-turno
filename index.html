@@ -516,11 +516,13 @@
     clear && (clear.onclick=()=>{ files.splice(0); invalidateMerged(); render(); updateUI(); updateConstHelper(); });
     return ()=>files;
   }
+  const getGnv = bindPhoto('gnv');
+  const getIzi = bindPhoto('izipay');
   const validPhotos = () => {
     const tarjeta = toNum(document.querySelector('#tarjeta')?.value);
     const qr = toNum(document.querySelector('#qr')?.value);
     const needsIzi = (tarjeta > 0 || qr > 0);
-    const iziCount = getIzi().length;
+    const iziCount = (getIzi && getIzi()) ? getIzi().length : 0;
     if (needsIzi) {
       return iziCount >= 1;
     }
