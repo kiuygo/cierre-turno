@@ -553,7 +553,17 @@
     try{
       const gnv = (getGnv && getGnv()[0]) || null;
       const izi = (getIzi && getIzi()[0]) || null;
-      if(!gnv || !izi){ alert('Faltan fotos: sube GNV e Izipay.'); return; }
+      if(!gnv && !izi){ return null; }
+      if (gnv && !izi) {
+        window.mergedConstanciaBlob = gnv;
+        window.mergedConstanciaName = gnv.name || 'constancia-gnv.jpg';
+        return gnv;
+      }
+      if (!gnv && izi) {
+        window.mergedConstanciaBlob = izi;
+        window.mergedConstanciaName = izi.name || 'constancia-izipay.jpg';
+        return izi;
+      }
       const readImg = f => new Promise((res, rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=URL.createObjectURL(f); img.decoding='async'; });
       const [img1, img2] = await Promise.all([readImg(gnv), readImg(izi)]);
       const baseH = Math.min(1000, Math.min(img1.naturalHeight||img1.height, img2.naturalHeight||img2.height));
