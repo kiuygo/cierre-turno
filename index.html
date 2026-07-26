@@ -188,6 +188,10 @@
     <div class="app-card">
       <h1>Cierre de Turno - Caja (S/)</h1>
       <p>Formulario de registro diario.</p>
+      <div class="header-actions">
+        <button type="button" class="btn btn-sm outlined" onclick="openModal('modal-settings')">⚙️ Configuración</button>
+        <button type="button" class="btn btn-sm outlined" onclick="openModal('modal-history'); renderHistoryList();">📊 Historial / BD</button>
+      </div>
     </div>
   </div>
 </header>
@@ -286,7 +290,7 @@
     <h2 style="margin-top:0;">Totales del sistema</h2>
     <div class="row-3">
       <div class="textfield"><label for="total-m3" id="lbl-totalm3">DIF <span id="u1">M3</span></label><input id="total-m3" inputmode="decimal" placeholder="0.00" class="valuefield ghost"/></div>
-      <div class="textfield"><label for="precio">PRECIO S/</label><input id="precio" inputmode="decimal" value="2.40" class="valuefield ghost"/></div>
+      <div class="textfield"><label for="precio">PRECIO S/</label><input id="precio" inputmode="decimal" value="2.50" class="valuefield ghost"/></div>
       <div class="textfield"><label>S/ <span id="u2">M3</span></label><output id="total-s" class="valuefield ghost" ></output></div>
     </div>
     <div class="row-3" style="margin-top:12px">
@@ -365,9 +369,11 @@
   <!-- Acciones -->
   <section class="card" id="actions-card">
     <div class="icon-row">
+      <button id="btn-telegram" class="btn filled" style="background:#0088cc; border-color:#0088cc; color:#fff;" onclick="doTelegramShare()">📩 Telegram</button>
       <button id="btn-share" class="btn filled" disabled style="display:none">🟢 WhatsApp</button>
       <button id="btn-copy" class="btn outlined" disabled style="display:none">📋 Copiar texto</button>
-      <button id="btn-print" class="btn outlined" disabled style="display:none">🖨️ Imprimir 80mm</button>
+      <button id="btn-print" class="btn outlined" disabled style="display:none" onclick="doPrint80mm()">🖨️ Imprimir 80mm</button>
+      <button id="btn-save-db" class="btn tonal" onclick="saveCurrentCierreToDB()">💾 Guardar en BD</button>
       <button id="btn-contact-inline" class="btn tonal" style="display:none">📞 Contactar soporte</button>
     </div>
     <div id="action-msg" class="helper" style="margin-top:6px;"></div>
@@ -1337,8 +1343,179 @@ document.addEventListener('DOMContentLoaded', () => {
   new MutationObserver(()=>clean()).observe(document.body,{childList:true,subtree:true});
 })();
 </script>
+<script src="assets/db.js"></script>
 <!-- JS de mejoras visuales (hover, marcado editable, no-motion, etc.) -->
-<script defer="" src="assets/app.js"></script>
+<script defer src="assets/app.js"></script>
+
+<!-- ===== Modal Configuración ===== -->
+<div id="modal-settings" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>⚙️ Configuración del Sistema</h3>
+      <button type="button" class="modal-close" onclick="closeModal('modal-settings')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="textfield" style="margin-bottom:12px;">
+        <label>Precio M3 / Galón por defecto (S/)</label>
+        <input id="cfg-precio" type="number" step="0.01" value="2.50" />
+      </div>
+      <div class="textfield" style="margin-bottom:12px;">
+        <label>Teléfono WhatsApp Envíos (ej: 51937260860)</label>
+        <input id="cfg-wa-phone" type="text" placeholder="51..." />
+      </div>
+      <div class="textfield" style="margin-bottom:12px;">
+        <label>Teléfono WhatsApp Soporte (ej: 51965737361)</label>
+        <input id="cfg-wa-support" type="text" placeholder="51..." />
+      </div>
+      <div class="divider"></div>
+      <h4 style="margin:8px 0;">Telegram Bot API</h4>
+      <div class="textfield" style="margin-bottom:12px;">
+        <label>Telegram Bot Token (ej: 7123456789:AAHx...)</label>
+        <input id="cfg-tg-token" type="text" placeholder="Token dado por @BotFather" />
+      </div>
+      <div class="textfield" style="margin-bottom:12px;">
+        <label>Telegram Chat ID (ej: -100123456789)</label>
+        <input id="cfg-tg-chatid" type="text" placeholder="ID del grupo o chat" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn outlined" onclick="closeModal('modal-settings')">Cancelar</button>
+      <button type="button" class="btn filled" onclick="saveSettingsFromModal()">Guardar Cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Historial / BD ===== -->
+<div id="modal-history" class="modal-overlay">
+  <div class="modal-box" style="max-width:700px;">
+    <div class="modal-header">
+      <h3>📊 Historial de Cierres / BD</h3>
+      <button type="button" class="modal-close" onclick="closeModal('modal-history')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <button type="button" class="btn outlined" onclick="CTDB.exportToCSV()">📥 Exportar CSV</button>
+        <button type="button" class="btn outlined" onclick="CTDB.exportToJSONForParquet()">📦 Exportar JSON (Parquet)</button>
+      </div>
+      <div id="history-list-container">
+        <div class="helper">Cargando registros...</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn filled" onclick="closeModal('modal-history')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function loadSettingsToModal() {
+    if (typeof getSettings !== 'function') return;
+    const cfg = getSettings();
+    document.getElementById('cfg-precio').value = cfg.precio || '2.50';
+    document.getElementById('cfg-wa-phone').value = cfg.waPhone || '';
+    document.getElementById('cfg-wa-support').value = cfg.waSupport || '';
+    document.getElementById('cfg-tg-token').value = cfg.telegramToken || '';
+    document.getElementById('cfg-tg-chatid').value = cfg.telegramChatId || '';
+  }
+
+  function saveSettingsFromModal() {
+    if (typeof saveSettings !== 'function') return;
+    const cfg = getSettings();
+    cfg.precio = parseFloat(document.getElementById('cfg-precio').value) || 2.50;
+    cfg.waPhone = document.getElementById('cfg-wa-phone').value.trim();
+    cfg.waSupport = document.getElementById('cfg-wa-support').value.trim();
+    cfg.telegramToken = document.getElementById('cfg-tg-token').value.trim();
+    cfg.telegramChatId = document.getElementById('cfg-tg-chatid').value.trim();
+    saveSettings(cfg);
+
+    const pInput = document.getElementById('precio');
+    if (pInput) pInput.value = cfg.precio.toFixed(2);
+    if (typeof recalc === 'function') recalc();
+    closeModal('modal-settings');
+    if (typeof showActionToast === 'function') showActionToast('⚙️ Configuración guardada.');
+  }
+
+  async function saveCurrentCierreToDB(canal = 'manual') {
+    if (!window.CTDB) return;
+    const record = {
+      id: 'cierre-' + Date.now(),
+      timestamp_registro: Date.now(),
+      fecha: document.getElementById('fecha')?.value || new Date().toISOString().slice(0, 10),
+      sede: document.getElementById('sede')?.value || 'San Jeronimo',
+      area: (document.querySelector('input[name="area"]:checked')?.value) || 'GNV',
+      turno: (document.querySelector('input[name="turno"]:checked')?.value) || 'Mañana',
+      surtidor_1: document.getElementById('s1')?.checked || false,
+      surtidor_2: document.getElementById('s2')?.checked || false,
+      dni: document.getElementById('dni')?.value || '',
+      operador_nombre: document.getElementById('dni-help')?.textContent || '',
+      total_m3: toNum(document.getElementById('total-m3')?.value),
+      precio_unitario: toNum(document.getElementById('precio')?.value),
+      total_soles: toNum(document.getElementById('total-s')?.textContent),
+      financiacion: toNum(document.getElementById('finan')?.value),
+      gasolutions: toNum(document.getElementById('suma-sis')?.textContent),
+      n_despachos: toNum(document.getElementById('ndesp')?.value),
+      izipay_tarjetas: toNum(document.getElementById('tarjeta')?.value),
+      izipay_qr: toNum(document.getElementById('qr')?.value),
+      efectivo_total: toNum(document.getElementById('efectivo-total')?.textContent),
+      monto_contado: toNum(document.getElementById('st-contado')?.textContent),
+      dif_total: toNum(document.getElementById('st-diftotal')?.textContent),
+      dif_tarjetas: toNum(document.getElementById('st-diftarjeta')?.textContent),
+      dif_qr: toNum(document.getElementById('st-difqr')?.textContent),
+      dif_efectivo: toNum(document.getElementById('st-difef')?.textContent),
+      estado_cierre: (toNum(document.getElementById('st-diftotal')?.textContent) === 0) ? 'OK' : 'Con Diferencia',
+      otros: toNum(document.getElementById('otros')?.value),
+      observaciones: (document.getElementById('obs')?.value || '').trim(),
+      foto_gnv: (getGnv() && getGnv()[0] && getGnv()[0].name) || '',
+      foto_izipay: (getIzi() && getIzi()[0] && getIzi()[0].name) || '',
+      foto_constancia_unida: mergedConstanciaName || '',
+      enviado: canal !== 'manual',
+      canal_envio: canal,
+      impreso: false
+    };
+
+    try {
+      await CTDB.saveCierre(record);
+      if (typeof showActionToast === 'function') showActionToast('💾 Cierre guardado en la Base de Datos local.');
+    } catch (e) {
+      console.error('Error al guardar en DB:', e);
+    }
+  }
+
+  async function renderHistoryList() {
+    const container = document.getElementById('history-list-container');
+    if (!container || !window.CTDB) return;
+    const cierres = await CTDB.getAllCierres();
+    if (!cierres.length) {
+      container.innerHTML = '<div class="helper">No hay cierres registrados aún en la BD local.</div>';
+      return;
+    }
+    cierres.sort((a, b) => b.timestamp_registro - a.timestamp_registro);
+    let html = '';
+    cierres.forEach(c => {
+      const dt = new Date(c.timestamp_registro).toLocaleString();
+      const statusClass = c.estado_cierre === 'OK' ? 'color:#2e7d32;' : 'color:#d32f2f;';
+      html += `
+        <div class="history-item">
+          <div class="history-item-header">
+            <span>📅 ${c.fecha} - ${c.turno} (${c.sede})</span>
+            <span style="${statusClass}">${c.estado_cierre} (DIF: S/ ${c.dif_total})</span>
+          </div>
+          <div class="history-item-meta">
+            <span>DNI: ${c.dni}</span>
+            <span>Total Sis: S/ ${c.gasolutions}</span>
+            <span>Contado: S/ ${c.monto_contado}</span>
+            <span>Registrado: ${dt}</span>
+          </div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSettingsToModal();
+  });
+</script>
 <div id="action-toast" role="status" aria-live="polite"></div>
 </body>
 </html>

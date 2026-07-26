@@ -1,0 +1,23 @@
+{
+  "name": "Cierre de Turno / BIOCOM",
+  "short_name": "CierreTurno",
+  "description": "Registro y validación digital de cierres de turno para despachadores BIOCOM / SURCO",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FAFAFA",
+  "theme_color": "#00695C",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
